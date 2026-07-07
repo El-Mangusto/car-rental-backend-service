@@ -7,12 +7,12 @@ import com.elmangusto.carrental.exception.ResourceNotFoundException;
 import com.elmangusto.carrental.exception.ResourceAlreadyExistsException;
 import com.elmangusto.carrental.mapper.CarMapper;
 import com.elmangusto.carrental.repository.CarRepository;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -23,11 +23,13 @@ public class CarService {
     private final CarRepository carRepository;
     private final CarMapper carMapper;
 
+    @Transactional(readOnly = true)
     public Page<CarResponse> getAll(Pageable pageable) {
         return carRepository.findAll(pageable)
                 .map(carMapper::toResponse);
     }
 
+    @Transactional(readOnly = true)
     public CarResponse getById(Long id) {
 
         Car car = carRepository.findById(id)
@@ -36,7 +38,7 @@ public class CarService {
         return carMapper.toResponse(car);
     }
 
-    public CarResponse createCar(CarRequest request) {
+    public CarResponse create(CarRequest request) {
 
         log.info("Creating new car with registration number {}",
                 request.registrationNumber());

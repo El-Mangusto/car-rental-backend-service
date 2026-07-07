@@ -23,7 +23,8 @@ public class CarController {
     @GetMapping
     public Page<CarResponse> getAll(
             @ParameterObject
-            @PageableDefault(size = 10, sort = "brand") Pageable pageable) {
+            @PageableDefault(size = 10, sort = "brand")
+            Pageable pageable) {
         return carService.getAll(pageable);
     }
 
@@ -35,6 +36,6 @@ public class CarController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public CarResponse createCar(@RequestBody @Valid CarRequest request) {
-        return carService.createCar(request);
+        return carService.create(request);
     }
 }

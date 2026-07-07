@@ -46,10 +46,10 @@ public class Car {
     @Builder.Default
     private Condition condition = Condition.OPERATIONAL;
 
-    @Column(name = "price_per_hour", precision = 10, scale = 2)
+    @Column(nullable = false, name = "price_per_hour", precision = 10, scale = 2)
     private BigDecimal pricePerHour;
 
-    @Column(name = "price_per_day", precision = 10, scale = 2)
+    @Column(nullable = false, name = "price_per_day", precision = 10, scale = 2)
     private BigDecimal pricePerDay;
 
 }
