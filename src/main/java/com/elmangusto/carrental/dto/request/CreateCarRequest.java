@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 
-public record CarRequest (
+public record CreateCarRequest(
 
     @NotBlank(message = "Brand is required")
     @Size(max = 50, message = "Brand must not exceed 50 characters")

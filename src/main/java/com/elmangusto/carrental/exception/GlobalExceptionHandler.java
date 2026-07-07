@@ -35,7 +35,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceAlreadyExistsException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
-    public ErrorResponse handleDuplicateRegistrationNumber(ResourceAlreadyExistsException ex) {
+    public ErrorResponse handleConflict(ConflictException ex) {
 
         log.warn(ex.getMessage());
 

@@ -1,13 +1,13 @@
 package com.elmangusto.carrental.entity;
 
 
-import com.elmangusto.carrental.entity.enums.BookingStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -37,7 +37,6 @@ public class Booking {
     private LocalDateTime endTime;
 
     @Column(nullable = false)
-    @Enumerated(EnumType.STRING)
-    @Builder.Default
-    private BookingStatus status = BookingStatus.CREATED;
+    private BigDecimal price;
+
 }

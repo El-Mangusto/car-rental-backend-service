@@ -1,6 +1,6 @@
 package com.elmangusto.carrental.service;
 
-import com.elmangusto.carrental.dto.request.CarRequest;
+import com.elmangusto.carrental.dto.request.CreateCarRequest;
 import com.elmangusto.carrental.dto.response.CarResponse;
 import com.elmangusto.carrental.entity.Car;
 import com.elmangusto.carrental.exception.ResourceNotFoundException;
@@ -38,7 +38,7 @@ public class CarService {
         return carMapper.toResponse(car);
     }
 
-    public CarResponse create(CarRequest request) {
+    public CarResponse create(CreateCarRequest request) {
 
         log.info("Creating new car with registration number {}",
                 request.registrationNumber());

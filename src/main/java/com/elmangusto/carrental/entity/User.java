@@ -3,10 +3,7 @@ package com.elmangusto.carrental.entity;
 import com.elmangusto.carrental.entity.enums.Role;
 import com.elmangusto.carrental.entity.enums.UserStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 
@@ -41,6 +38,7 @@ public class User {
     @Column(nullable = false, unique = true)
     private String login;
 
+    @ToString.Exclude
     @Column(nullable = false)
     private String password;
 

@@ -1,6 +1,6 @@
 package com.elmangusto.carrental.controller.api.v1;
 
-import com.elmangusto.carrental.dto.request.CarRequest;
+import com.elmangusto.carrental.dto.request.CreateCarRequest;
 import com.elmangusto.carrental.dto.response.CarResponse;
 import com.elmangusto.carrental.service.CarService;
 import jakarta.validation.Valid;
@@ -14,8 +14,8 @@ import org.springframework.web.bind.annotation.*;
 
 
 @RestController
-@RequestMapping("/api/v1/cars")
 @RequiredArgsConstructor
+@RequestMapping("/api/v1/cars")
 public class CarController {
 
     private final CarService carService;
@@ -35,7 +35,7 @@ public class CarController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public CarResponse createCar(@RequestBody @Valid CarRequest request) {
+    public CarResponse createCar(@RequestBody @Valid CreateCarRequest request) {
         return carService.create(request);
     }
 }

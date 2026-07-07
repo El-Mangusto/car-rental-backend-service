@@ -3,6 +3,7 @@ package com.elmangusto.carrental.controller.api.v1;
 import com.elmangusto.carrental.dto.request.UserAuthRequest;
 import com.elmangusto.carrental.dto.response.UserResponse;
 import com.elmangusto.carrental.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
@@ -12,8 +13,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
+@RequestMapping("/api/v1/users")
 public class UserController {
 
     private final UserService userService;
@@ -33,7 +34,7 @@ public class UserController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public UserResponse create(UserAuthRequest request) {
+    public UserResponse create(@RequestBody @Valid UserAuthRequest request) {
         return userService.create(request);
     }
 }

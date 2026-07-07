@@ -1,0 +1,2 @@
+ALTER TABLE bookings
+ADD COLUMN price NUMERIC(19, 2) NOT NULL;

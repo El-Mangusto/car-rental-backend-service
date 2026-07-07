@@ -1,6 +1,6 @@
 package com.elmangusto.carrental.service;
 
-import com.elmangusto.carrental.dto.request.CarRequest;
+import com.elmangusto.carrental.dto.request.CreateCarRequest;
 import com.elmangusto.carrental.dto.response.CarResponse;
 import com.elmangusto.carrental.entity.Car;
 import com.elmangusto.carrental.entity.enums.CarStatus;
@@ -43,7 +43,7 @@ class CarServiceTest {
     @Test
     void create_shouldSaveCar_whenRegistrationNumberIsUnique() {
 
-        CarRequest request = getCarRequest();
+        CreateCarRequest request = getCarRequest();
 
         Car car = new Car();
         Car carSaved = new Car();
@@ -77,7 +77,7 @@ class CarServiceTest {
     @Test
     void create_shouldThrowResourceAlreadyExistsException_whenRegistrationNumberAlreadyExists() {
 
-        CarRequest request = getCarRequest();
+        CreateCarRequest request = getCarRequest();
 
         when(carRepository.existsByRegistrationNumber("AA23376BC"))
                 .thenReturn(true);
@@ -204,8 +204,8 @@ class CarServiceTest {
         );
     }
 
-    private static CarRequest getCarRequest() {
-        return new CarRequest(
+    private static CreateCarRequest getCarRequest() {
+        return new CreateCarRequest(
                 "BMW",
                 "M5",
                 "AA23376BC",
