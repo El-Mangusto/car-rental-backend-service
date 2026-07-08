@@ -7,11 +7,11 @@ import java.time.LocalDateTime;
 
 public record CreateBookingRequest(
 
-        @NotBlank(message = "User id is required")
+        @NotNull(message = "User id is required")
         @Positive(message = "User id must be greater than 0")
         Long userId,
 
-        @NotBlank(message = "carId is required")
+        @NotNull(message = "carId is required")
         @Positive(message = "Car id must be greater than 0")
         Long carId,
 
