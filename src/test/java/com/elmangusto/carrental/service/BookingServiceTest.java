@@ -17,6 +17,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -228,7 +232,110 @@ class BookingServiceTest {
         verifyNoMoreInteractions(bookingRepository, bookingMapper);
     }
 
+    @Test
+    void getById_shouldReturnBooking_whenBookingExists() {
 
+        Booking booking = getBooking();
+
+        when(bookingRepository.findById(1L))
+                .thenReturn(Optional.of(booking));
+
+        BookingResponse bookingResponse = getBookingResponse();
+
+        when(bookingMapper.toResponse(booking))
+                .thenReturn(bookingResponse);
+
+        BookingResponse result = bookingService.getById(1L);
+
+        assertThat(result).isNotNull();
+        assertThat(result).isEqualTo(bookingResponse);
+
+        verify(bookingRepository).findById(1L);
+        verify(bookingMapper).toResponse(booking);
+    }
+
+    @Test
+    void getById_shouldThrowResourceNotFoundException_whenBookingDoesNotExist() {
+
+        when(bookingRepository.findById(1L))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> bookingService.getById(1L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("1");
+
+        verify(bookingRepository).findById(1L);
+    }
+
+    @Test
+    void getAll_shouldReturnUserBookings_whenUserIdIsProvided() {
+
+        Booking booking = getBooking();
+
+        BookingResponse response = getBookingResponse();
+
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Page<Booking> bookings = new PageImpl<>(List.of(booking));
+
+        when(bookingRepository.findAllByUser_Id(1L, pageable))
+                .thenReturn(bookings);
+
+        when(bookingMapper.toResponse(booking))
+                .thenReturn(response);
+
+        Page<BookingResponse> result = bookingService.getAll(1L, pageable);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getContent()).containsExactly(response);
+
+        verify(bookingRepository).findAllByUser_Id(1L, pageable);
+        verify(bookingMapper).toResponse(booking);
+        verifyNoMoreInteractions(bookingRepository, bookingMapper);
+    }
+
+    @Test
+    void getAll_shouldReturnAllBookings_whenUserIdIsNull() {
+
+        Booking booking = getBooking();
+
+        BookingResponse response = getBookingResponse();
+
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Page<Booking> bookings = new PageImpl<>(List.of(booking));
+
+        when(bookingRepository.findAll(pageable))
+                .thenReturn(bookings);
+
+        when(bookingMapper.toResponse(booking))
+                .thenReturn(response);
+
+        Page<BookingResponse> result = bookingService.getAll(null, pageable);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getContent()).containsExactly(response);
+
+        verify(bookingRepository).findAll(pageable);
+        verify(bookingMapper).toResponse(booking);
+        verifyNoMoreInteractions(bookingRepository, bookingMapper);
+    }
+
+    @Test
+    void getAll_shouldReturnEmptyPage_whenNoBookingsExist() {
+
+        Pageable pageable = PageRequest.of(0, 10);
+
+        when(bookingRepository.findAll(pageable))
+                .thenReturn(Page.empty(pageable));
+
+        Page<BookingResponse> result = bookingService.getAll(null, pageable);
+
+        assertThat(result).isEmpty();
+
+        verify(bookingRepository).findAll(pageable);
+        verifyNoMoreInteractions(bookingRepository, bookingMapper);
+    }
 
     private static User getUser() {
         return User.builder()

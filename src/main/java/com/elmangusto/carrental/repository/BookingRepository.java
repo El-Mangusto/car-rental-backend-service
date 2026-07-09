@@ -1,6 +1,8 @@
 package com.elmangusto.carrental.repository;
 
 import com.elmangusto.carrental.entity.Booking;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -24,5 +26,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime
     );
+
+    Page<Booking> findAllByUser_Id(Long userId, Pageable pageable);
 
 }

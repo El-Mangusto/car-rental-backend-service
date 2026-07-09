@@ -5,6 +5,11 @@ import com.elmangusto.carrental.dto.response.BookingResponse;
 import com.elmangusto.carrental.service.BookingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,6 +19,20 @@ import org.springframework.web.bind.annotation.*;
 public class BookingController {
 
     private final BookingService bookingService;
+
+    @GetMapping("/{id}")
+    public BookingResponse getById(@PathVariable Long id) {
+        return bookingService.getById(id);
+    }
+
+    @GetMapping
+    public Page<BookingResponse> getAll(
+            @RequestParam(required = false) Long userId,
+            @ParameterObject
+            @PageableDefault(size = 10, sort = "startTime")
+            Pageable pageable) {
+        return bookingService.getAll(userId, pageable);
+    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

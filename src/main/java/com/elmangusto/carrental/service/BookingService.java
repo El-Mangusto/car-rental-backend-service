@@ -13,6 +13,8 @@ import com.elmangusto.carrental.repository.CarRepository;
 import com.elmangusto.carrental.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,24 @@ public class BookingService {
     private final BookingMapper bookingMapper;
     private final UserRepository userRepository;
     private final CarRepository carRepository;
+
+    @Transactional(readOnly = true)
+    public BookingResponse getById(Long id) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", id));
+
+        return bookingMapper.toResponse(booking);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<BookingResponse> getAll(Long userId, Pageable pageable) {
+
+        Page<Booking> bookings = (userId == null)
+                ? bookingRepository.findAll(pageable)
+                : bookingRepository.findAllByUser_Id(userId, pageable);
+
+        return bookings.map(bookingMapper::toResponse);
+    }
 
     public BookingResponse create(CreateBookingRequest request) {
 
