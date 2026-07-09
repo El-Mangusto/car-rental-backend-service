@@ -147,6 +147,88 @@ class BookingServiceTest {
         verify(bookingMapper, never()).toResponse(any());
     }
 
+    @Test
+    void cancel_shouldCancelBooking_whenBookingExists() {
+
+        Booking booking = getBooking();
+        BookingResponse response = getBookingResponse();
+
+        when(bookingRepository.findById(1L))
+                .thenReturn(Optional.of(booking));
+
+        when (bookingRepository.save((any(Booking.class))))
+                .thenReturn(booking);
+
+        when (bookingMapper.toResponse(booking))
+                .thenReturn(response);
+
+        BookingResponse result = bookingService.cancel(1L);
+
+        assertThat(result).isEqualTo(response);
+        assertThat(booking.isCancelled()).isTrue();
+
+        verify(bookingRepository).findById(1L);
+        verify(bookingRepository).save(booking);
+        verify(bookingMapper).toResponse(booking);
+        verifyNoMoreInteractions(bookingRepository, bookingMapper);
+    }
+
+    @Test
+    void cancel_shouldThrowResourceNotFoundException_whenBookingDoesNotExist() {
+
+        when(bookingRepository.findById(1L))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> bookingService.cancel(1L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Booking")
+                .hasMessageContaining("1");
+
+        verify(bookingRepository).findById(1L);
+        verifyNoMoreInteractions(bookingRepository, bookingMapper);
+    }
+
+    @Test
+    void cancel_shouldThrowBookingConflictException_whenBookingIsAlreadyCancelled() {
+
+        Booking booking = Booking.builder()
+                .id(1L)
+                .cancelled(true)
+                .startTime(LocalDateTime.now().plusDays(1))
+                .build();
+
+        when(bookingRepository.findById(1L))
+                .thenReturn(Optional.of(booking));
+
+        assertThatThrownBy(() -> bookingService.cancel(1L))
+                .isInstanceOf(BookingConflictException.class)
+                .hasMessageContaining("already cancelled");
+
+        verify(bookingRepository).findById(1L);
+        verifyNoMoreInteractions(bookingRepository, bookingMapper);
+    }
+
+    @Test
+    void cancel_shouldThrowBookingConflictException_whenRentalPeriodHasAlreadyStarted() {
+
+        Booking booking = Booking.builder()
+                .id(1L)
+                .cancelled(false)
+                .startTime(LocalDateTime.now().minusMinutes(1))
+                .build();
+
+        when(bookingRepository.findById(1L))
+                .thenReturn(Optional.of(booking));
+
+        assertThatThrownBy(() -> bookingService.cancel(1L))
+                .isInstanceOf(BookingConflictException.class)
+                .hasMessageContaining("rental period already started");
+
+        verify(bookingRepository).findById(1L);
+        verifyNoMoreInteractions(bookingRepository, bookingMapper);
+    }
+
+
 
     private static User getUser() {
         return User.builder()
@@ -172,6 +254,7 @@ class BookingServiceTest {
                 .startTime(LocalDateTime.of(2026, 7, 10, 10, 0))
                 .endTime(LocalDateTime.of(2026, 7, 10, 14, 0))
                 .price(BigDecimal.valueOf(136))
+                .cancelled(false)
                 .build();
     }
 
@@ -192,7 +275,8 @@ class BookingServiceTest {
                 null,
                 null,
                 LocalDateTime.of(2026, 7, 10, 10, 0),
-                LocalDateTime.of(2026, 7, 10, 14, 0)
+                LocalDateTime.of(2026, 7, 10, 14, 0),
+                false
         );
     }
 }

@@ -71,4 +71,26 @@ public class BookingService {
 
         return bookingMapper.toResponse(saved);
     }
+
+    public BookingResponse cancel(Long id) {
+
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", id));
+
+        if (booking.isCancelled()) {
+            throw new BookingConflictException(
+                    "Booking with id %d is already cancelled".formatted(id));
+        }
+
+        if (booking.getStartTime().isBefore(LocalDateTime.now())) {
+            throw new BookingConflictException(
+                    "Cannot cancel booking with id %d: rental period already started".formatted(id));
+        }
+
+        booking.setCancelled(true);
+
+        Booking saved = bookingRepository.save(booking);
+
+        return bookingMapper.toResponse(saved);
+    }
 }

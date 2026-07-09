@@ -17,6 +17,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
         WHERE b.car.id = :carId
         AND b.startTime < :endTime
         AND b.endTime > :startTime
+        AND b.cancelled = false
         """)
     List<Booking> findOverlappingBookings(
             @Param("carId") Long carId,

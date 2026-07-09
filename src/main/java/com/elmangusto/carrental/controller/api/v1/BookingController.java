@@ -20,4 +20,9 @@ public class BookingController {
     public BookingResponse create(@RequestBody @Valid CreateBookingRequest request) {
         return bookingService.create(request);
     }
+
+    @PatchMapping("/{id}/cancel")
+    public BookingResponse cancel(@PathVariable Long id) {
+        return bookingService.cancel(id);
+    }
 }

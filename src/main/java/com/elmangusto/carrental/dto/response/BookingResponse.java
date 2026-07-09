@@ -8,5 +8,6 @@ public record BookingResponse(
         UserSummaryResponse user,
         CarSummaryResponse car,
         LocalDateTime startTime,
-        LocalDateTime endTime
+        LocalDateTime endTime,
+        boolean cancelled
 ) {}

@@ -39,4 +39,7 @@ public class Booking {
     @Column(nullable = false)
     private BigDecimal price;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean cancelled = false;
 }
