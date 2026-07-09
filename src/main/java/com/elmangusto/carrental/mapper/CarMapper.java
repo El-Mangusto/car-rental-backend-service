@@ -5,7 +5,6 @@ import com.elmangusto.carrental.dto.response.CarResponse;
 import com.elmangusto.carrental.dto.response.CarSummaryResponse;
 import com.elmangusto.carrental.entity.Car;
 import com.elmangusto.carrental.entity.enums.CarStatus;
-import com.elmangusto.carrental.entity.enums.Condition;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;
@@ -26,8 +25,5 @@ public interface CarMapper {
             car.setStatus(CarStatus.AVAILABLE);
         }
 
-        if (car.getCondition() == null) {
-            car.setCondition(Condition.OPERATIONAL);
-        }
     }
 }

@@ -1,7 +1,6 @@
 package com.elmangusto.carrental.entity;
 
 
-import com.elmangusto.carrental.entity.enums.Condition;
 import com.elmangusto.carrental.entity.enums.CarStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -40,11 +39,6 @@ public class Car {
     @Enumerated(EnumType.STRING)
     @Builder.Default
     private CarStatus status = CarStatus.AVAILABLE;
-
-    @Column(nullable = false)
-    @Enumerated(EnumType.STRING)
-    @Builder.Default
-    private Condition condition = Condition.OPERATIONAL;
 
     @Column(nullable = false, name = "price_per_hour", precision = 10, scale = 2)
     private BigDecimal pricePerHour;

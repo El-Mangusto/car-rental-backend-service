@@ -1,7 +1,6 @@
 package com.elmangusto.carrental.dto.response;
 
 import com.elmangusto.carrental.entity.enums.CarStatus;
-import com.elmangusto.carrental.entity.enums.Condition;
 
 
 import java.math.BigDecimal;
@@ -15,7 +14,6 @@ public record CarResponse (
     String registrationNumber,
     LocalDate dateRegistration,
     CarStatus status,
-    Condition condition,
     BigDecimal pricePerHour,
     BigDecimal pricePerDay
 ) {}

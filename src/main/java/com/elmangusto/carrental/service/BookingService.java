@@ -5,8 +5,10 @@ import com.elmangusto.carrental.dto.response.BookingResponse;
 import com.elmangusto.carrental.entity.Booking;
 import com.elmangusto.carrental.entity.Car;
 import com.elmangusto.carrental.entity.User;
+import com.elmangusto.carrental.entity.enums.CarStatus;
 import com.elmangusto.carrental.entity.enums.UserStatus;
 import com.elmangusto.carrental.exception.BookingConflictException;
+import com.elmangusto.carrental.exception.CarUnavailableException;
 import com.elmangusto.carrental.exception.ResourceNotFoundException;
 import com.elmangusto.carrental.exception.UserBannedException;
 import com.elmangusto.carrental.mapper.BookingMapper;
@@ -75,6 +77,12 @@ public class BookingService {
                     log.warn("Booking creation failed: car not found, carId={}", request.carId());
                     return new ResourceNotFoundException("Car", request.carId());
                 });
+
+        if (car.getStatus() != CarStatus.AVAILABLE) {
+            log.warn("Booking creation failed: carId={} is MAINTENANCE", car.getId());
+            throw new CarUnavailableException(
+                    "Car with id %d is %s and cannot create bookings".formatted(car.getId(), car.getStatus()));
+        }
 
         LocalDateTime endTime = request.billingType()
                 .calculateEndTime(request.startTime(), request.duration());

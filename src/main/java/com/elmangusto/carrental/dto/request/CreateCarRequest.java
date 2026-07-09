@@ -1,7 +1,6 @@
 package com.elmangusto.carrental.dto.request;
 
 import com.elmangusto.carrental.entity.enums.CarStatus;
-import com.elmangusto.carrental.entity.enums.Condition;
 import jakarta.validation.constraints.*;
 
 
@@ -28,8 +27,6 @@ public record CreateCarRequest(
     LocalDate dateRegistration,
 
     CarStatus status,
-
-    Condition condition,
 
     @PositiveOrZero(message = "Price per hour must be greater than or equal to 0")
     @Digits(integer = 10, fraction = 2, message = "Invalid price format")

@@ -6,8 +6,10 @@ import com.elmangusto.carrental.dto.response.BookingResponse;
 import com.elmangusto.carrental.entity.Booking;
 import com.elmangusto.carrental.entity.Car;
 import com.elmangusto.carrental.entity.User;
+import com.elmangusto.carrental.entity.enums.CarStatus;
 import com.elmangusto.carrental.entity.enums.UserStatus;
 import com.elmangusto.carrental.exception.BookingConflictException;
+import com.elmangusto.carrental.exception.CarUnavailableException;
 import com.elmangusto.carrental.exception.ResourceNotFoundException;
 import com.elmangusto.carrental.exception.UserBannedException;
 import com.elmangusto.carrental.mapper.BookingMapper;
@@ -170,6 +172,31 @@ class BookingServiceTest {
 
         verify(userRepository).findById(user.getId());
         verify(carRepository, never()).findById(any());
+        verify(bookingRepository, never()).findOverlappingBookings(any(), any(), any());
+        verify(bookingRepository, never()).save(any());
+    }
+
+    @Test
+    void create_shouldThrowCarUnavailableException_whenCarStatusIsMaintenance() {
+
+        CreateBookingRequest request = getBookingRequest();
+
+        User user = getUser();
+        Car car = getCar();
+        car.setStatus(CarStatus.MAINTENANCE);
+
+        when(userRepository.findById(request.userId()))
+                .thenReturn(Optional.of(user));
+
+        when(carRepository.findById(request.carId()))
+                .thenReturn(Optional.of(car));
+
+        assertThatThrownBy(() -> bookingService.create(request))
+                .isInstanceOf(CarUnavailableException.class)
+                .hasMessageContaining(car.getId().toString());
+
+        verify(userRepository).findById(user.getId());
+        verify(carRepository).findById(car.getId());
         verify(bookingRepository, never()).findOverlappingBookings(any(), any(), any());
         verify(bookingRepository, never()).save(any());
     }

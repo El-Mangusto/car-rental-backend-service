@@ -4,7 +4,6 @@ import com.elmangusto.carrental.dto.request.CreateCarRequest;
 import com.elmangusto.carrental.dto.response.CarResponse;
 import com.elmangusto.carrental.entity.Car;
 import com.elmangusto.carrental.entity.enums.CarStatus;
-import com.elmangusto.carrental.entity.enums.Condition;
 import com.elmangusto.carrental.exception.ResourceAlreadyExistsException;
 import com.elmangusto.carrental.exception.ResourceNotFoundException;
 import com.elmangusto.carrental.mapper.CarMapper;
@@ -184,7 +183,6 @@ class CarServiceTest {
                 .dateRegistration(LocalDate.now())
                 .registrationNumber("AA23376BC")
                 .status(CarStatus.AVAILABLE)
-                .condition(Condition.OPERATIONAL)
                 .pricePerHour(BigDecimal.valueOf(34))
                 .pricePerDay(BigDecimal.valueOf(120))
                 .build();
@@ -198,7 +196,6 @@ class CarServiceTest {
                 "AA23376BC",
                 LocalDate.now(),
                 CarStatus.AVAILABLE,
-                Condition.OPERATIONAL,
                 BigDecimal.valueOf(34),
                 BigDecimal.valueOf(120)
         );
@@ -211,7 +208,6 @@ class CarServiceTest {
                 "AA23376BC",
                 LocalDate.now(),
                 CarStatus.AVAILABLE,
-                Condition.OPERATIONAL,
                 BigDecimal.valueOf(34),
                 BigDecimal.valueOf(120)
         );
