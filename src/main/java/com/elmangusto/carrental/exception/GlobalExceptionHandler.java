@@ -68,6 +68,20 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(UserBannedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ErrorResponse handleUserBanned(UserBannedException ex) {
+
+        log.warn(ex.getMessage());
+
+        return new ErrorResponse(
+                HttpStatus.FORBIDDEN.value(),
+                HttpStatus.FORBIDDEN.getReasonPhrase(),
+                ex.getMessage(),
+                LocalDateTime.now()
+        );
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleMessageNotReadable(HttpMessageNotReadableException ex) {

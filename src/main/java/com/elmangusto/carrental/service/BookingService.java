@@ -5,8 +5,10 @@ import com.elmangusto.carrental.dto.response.BookingResponse;
 import com.elmangusto.carrental.entity.Booking;
 import com.elmangusto.carrental.entity.Car;
 import com.elmangusto.carrental.entity.User;
+import com.elmangusto.carrental.entity.enums.UserStatus;
 import com.elmangusto.carrental.exception.BookingConflictException;
 import com.elmangusto.carrental.exception.ResourceNotFoundException;
+import com.elmangusto.carrental.exception.UserBannedException;
 import com.elmangusto.carrental.mapper.BookingMapper;
 import com.elmangusto.carrental.repository.BookingRepository;
 import com.elmangusto.carrental.repository.CarRepository;
@@ -53,11 +55,26 @@ public class BookingService {
 
     public BookingResponse create(CreateBookingRequest request) {
 
+        log.info("Creating booking for userId={}, carId={}, startTime={}, billingType={}, duration={}",
+                request.userId(), request.carId(), request.startTime(), request.billingType(), request.duration());
+
         User user = userRepository.findById(request.userId())
-                .orElseThrow(() -> new ResourceNotFoundException("User", request.userId()));
+                .orElseThrow(() -> {
+                    log.warn("Booking creation failed: user not found, userId={}", request.userId());
+                    return new ResourceNotFoundException("User", request.userId());
+                });
+
+        if (user.getStatus() == UserStatus.BANNED) {
+            log.warn("Booking creation failed: userId={} is banned", user.getId());
+            throw new UserBannedException(
+                    "User with id %d is banned and cannot create bookings".formatted(user.getId()));
+        }
 
         Car car = carRepository.findById(request.carId())
-                .orElseThrow(() -> new ResourceNotFoundException("Car", request.carId()));;
+                .orElseThrow(() -> {
+                    log.warn("Booking creation failed: car not found, carId={}", request.carId());
+                    return new ResourceNotFoundException("Car", request.carId());
+                });
 
         LocalDateTime endTime = request.billingType()
                 .calculateEndTime(request.startTime(), request.duration());
@@ -66,6 +83,8 @@ public class BookingService {
                 car.getId(), request.startTime(), endTime);
 
         if (!overlapping.isEmpty()) {
+            log.warn("Booking creation failed: carId={} already booked for period {} - {}",
+                    car.getId(), request.startTime(), endTime);
             throw new BookingConflictException(
                     "Car with id %d is already booked for the period %s - %s"
                             .formatted(car.getId(), request.startTime(), endTime));
@@ -89,20 +108,31 @@ public class BookingService {
 
         Booking saved = bookingRepository.save(booking);
 
+        log.info("Booking created successfully. id={}, userId={}, carId={}, price={}",
+                saved.getId(), user.getId(), car.getId(), price);
+
         return bookingMapper.toResponse(saved);
     }
 
     public BookingResponse cancel(Long id) {
 
+        log.info("Cancelling booking id={}", id);
+
         Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Booking", id));
+                .orElseThrow(() -> {
+                    log.warn("Booking cancellation failed: booking not found, id={}", id);
+                    return new ResourceNotFoundException("Booking", id);
+                });
 
         if (booking.isCancelled()) {
+            log.warn("Booking cancellation failed: booking id={} already cancelled", id);
             throw new BookingConflictException(
                     "Booking with id %d is already cancelled".formatted(id));
         }
 
         if (booking.getStartTime().isBefore(LocalDateTime.now())) {
+            log.warn("Booking cancellation failed: booking id={} rental period already started (startTime={})",
+                    id, booking.getStartTime());
             throw new BookingConflictException(
                     "Cannot cancel booking with id %d: rental period already started".formatted(id));
         }
@@ -110,6 +140,8 @@ public class BookingService {
         booking.setCancelled(true);
 
         Booking saved = bookingRepository.save(booking);
+
+        log.info("Booking id={} cancelled successfully", saved.getId());
 
         return bookingMapper.toResponse(saved);
     }

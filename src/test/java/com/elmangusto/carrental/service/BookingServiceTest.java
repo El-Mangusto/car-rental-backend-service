@@ -6,8 +6,10 @@ import com.elmangusto.carrental.dto.response.BookingResponse;
 import com.elmangusto.carrental.entity.Booking;
 import com.elmangusto.carrental.entity.Car;
 import com.elmangusto.carrental.entity.User;
+import com.elmangusto.carrental.entity.enums.UserStatus;
 import com.elmangusto.carrental.exception.BookingConflictException;
 import com.elmangusto.carrental.exception.ResourceNotFoundException;
+import com.elmangusto.carrental.exception.UserBannedException;
 import com.elmangusto.carrental.mapper.BookingMapper;
 import com.elmangusto.carrental.repository.BookingRepository;
 import com.elmangusto.carrental.repository.CarRepository;
@@ -149,6 +151,27 @@ class BookingServiceTest {
         verify(bookingRepository).findOverlappingBookings(eq(car.getId()), any(), any());
         verify(bookingRepository, never()).save(any());
         verify(bookingMapper, never()).toResponse(any());
+    }
+
+    @Test
+    void create_shouldThrowUserBannedException_whenUserStatusIsBanned() {
+
+        CreateBookingRequest request = getBookingRequest();
+
+        User user = getUser();
+        user.setStatus(UserStatus.BANNED);
+
+        when(userRepository.findById(request.userId()))
+                .thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> bookingService.create(request))
+                .isInstanceOf(UserBannedException.class)
+                .hasMessageContaining(user.getId().toString());
+
+        verify(userRepository).findById(user.getId());
+        verify(carRepository, never()).findById(any());
+        verify(bookingRepository, never()).findOverlappingBookings(any(), any(), any());
+        verify(bookingRepository, never()).save(any());
     }
 
     @Test
