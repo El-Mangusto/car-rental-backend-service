@@ -7,7 +7,6 @@ import com.elmangusto.carrental.exception.ResourceAlreadyExistsException;
 import com.elmangusto.carrental.exception.ResourceNotFoundException;
 import com.elmangusto.carrental.mapper.UserMapper;
 import com.elmangusto.carrental.repository.UserRepository;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -39,25 +38,19 @@ public class UserService {
         return userMapper.toResponse(user);
     }
 
-    public UserResponse create(@Valid UserAuthRequest request) {
+    public UserResponse create(UserAuthRequest request) {
 
-        log.info("Creating new user with login {}",
-                request.login());
+        log.info("Creating user with login={}", request.login());
 
-        if(userRepository.existsByLogin(request.login())) {
-
-            log.warn("Attempt to create duplicate user with login {}",
-                    request.login());
-
-            throw new ResourceAlreadyExistsException(request.login());
+        if (userRepository.existsByLogin(request.login())) {
+            throw new ResourceAlreadyExistsException(
+                    "User with login '%s' already exists".formatted(request.login()));
         }
 
         User user = userMapper.toEntity(request);
         User saved = userRepository.save(user);
 
-        log.info("User created successfully. id={}, login={}",
-                saved.getId(),
-                saved.getLogin());
+        log.info("User created successfully. id={}, login={}", saved.getId(), saved.getLogin());
 
         return userMapper.toResponse(saved);
     }

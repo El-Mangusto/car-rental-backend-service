@@ -4,6 +4,7 @@ import com.elmangusto.carrental.dto.request.CreateCarRequest;
 import com.elmangusto.carrental.dto.response.CarResponse;
 import com.elmangusto.carrental.entity.Car;
 import com.elmangusto.carrental.entity.enums.CarStatus;
+import com.elmangusto.carrental.exception.CarUnavailableException;
 import com.elmangusto.carrental.exception.ResourceAlreadyExistsException;
 import com.elmangusto.carrental.exception.ResourceNotFoundException;
 import com.elmangusto.carrental.mapper.CarMapper;
@@ -172,7 +173,74 @@ class CarServiceTest {
         verifyNoInteractions(carMapper);
     }
 
+    @Test
+    void changeStatus_shouldUpdateStatus_whenCarExist() {
 
+        Car car = getCar();
+        Car saved = getCar();
+        saved.setStatus(CarStatus.MAINTENANCE);
+        CarResponse response = new CarResponse(
+                1L,
+                "BMW",
+                "M5",
+                "AA23376BC",
+                LocalDate.now(),
+                CarStatus.MAINTENANCE,
+                BigDecimal.valueOf(34),
+                BigDecimal.valueOf(120)
+        );
+
+        when(carRepository.findById(1L))
+                .thenReturn(Optional.of(car));
+
+        when(carMapper.toResponse(car))
+                .thenReturn(response);
+
+        when(carRepository.save(car))
+                .thenReturn(saved);
+
+        CarResponse result = carService.changeStatus(1L, CarStatus.MAINTENANCE);
+
+        assertThat(result).isNotNull();
+        assertThat(result.status()).isEqualTo(CarStatus.MAINTENANCE);
+
+        verify(carRepository).findById(1L);
+        verify(carRepository).save(car);
+        verify(carMapper).toResponse(car);
+    }
+
+    @Test
+    void changeStatus_shouldResourceNotFoundException_whenCarDoesNotExist() {
+
+        when(carRepository.findById(1L))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> carService.changeStatus(1L, CarStatus.AVAILABLE))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("1");
+
+        verify(carRepository).findById(any(Long.class));
+        verify(carRepository, never()).save(any(Car.class));
+        verify(carMapper, never()).toResponse(any(Car.class));
+    }
+
+    @Test
+    void changeStatus_shouldCarUnavailableException_whenCarStatusIsScrapped() {
+
+        Car car = getCar();
+        car.setStatus(CarStatus.SCRAPPED);
+
+        when(carRepository.findById(1L))
+                .thenReturn(Optional.of(car));
+
+        assertThatThrownBy(() -> carService.changeStatus(1L, CarStatus.AVAILABLE))
+                .isInstanceOf(CarUnavailableException.class)
+                .hasMessageContaining("1");
+
+        verify(carRepository).findById(any(Long.class));
+        verify(carRepository, never()).save(any(Car.class));
+        verify(carMapper, never()).toResponse(any(Car.class));
+    }
 
 
     private static Car getCar() {

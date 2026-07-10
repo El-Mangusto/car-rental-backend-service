@@ -408,8 +408,8 @@ class BookingServiceTest {
                 .id(1L)
                 .user(getUser())
                 .car(getCar())
-                .startTime(LocalDateTime.of(2026, 7, 10, 10, 0))
-                .endTime(LocalDateTime.of(2026, 7, 10, 14, 0))
+                .startTime(LocalDateTime.now().plusDays(1))
+                .endTime(LocalDateTime.now().plusDays(2))
                 .price(BigDecimal.valueOf(136))
                 .cancelled(false)
                 .build();

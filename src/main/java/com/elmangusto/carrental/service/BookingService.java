@@ -61,25 +61,17 @@ public class BookingService {
                 request.userId(), request.carId(), request.startTime(), request.billingType(), request.duration());
 
         User user = userRepository.findById(request.userId())
-                .orElseThrow(() -> {
-                    log.warn("Booking creation failed: user not found, userId={}", request.userId());
-                    return new ResourceNotFoundException("User", request.userId());
-                });
+                .orElseThrow(() -> new ResourceNotFoundException("User", request.userId()));
 
         if (user.getStatus() == UserStatus.BANNED) {
-            log.warn("Booking creation failed: userId={} is banned", user.getId());
             throw new UserBannedException(
                     "User with id %d is banned and cannot create bookings".formatted(user.getId()));
         }
 
         Car car = carRepository.findById(request.carId())
-                .orElseThrow(() -> {
-                    log.warn("Booking creation failed: car not found, carId={}", request.carId());
-                    return new ResourceNotFoundException("Car", request.carId());
-                });
+                .orElseThrow(() -> new ResourceNotFoundException("Car", request.carId()));
 
         if (car.getStatus() != CarStatus.AVAILABLE) {
-            log.warn("Booking creation failed: carId={} is MAINTENANCE", car.getId());
             throw new CarUnavailableException(
                     "Car with id %d is %s and cannot create bookings".formatted(car.getId(), car.getStatus()));
         }
@@ -91,19 +83,14 @@ public class BookingService {
                 car.getId(), request.startTime(), endTime);
 
         if (!overlapping.isEmpty()) {
-            log.warn("Booking creation failed: carId={} already booked for period {} - {}",
-                    car.getId(), request.startTime(), endTime);
             throw new BookingConflictException(
                     "Car with id %d is already booked for the period %s - %s"
                             .formatted(car.getId(), request.startTime(), endTime));
         }
 
         BigDecimal price = switch (request.billingType()) {
-            case HOURLY -> car.getPricePerHour()
-                    .multiply(BigDecimal.valueOf(request.duration()));
-
-            case DAILY -> car.getPricePerDay()
-                    .multiply(BigDecimal.valueOf(request.duration()));
+            case HOURLY -> car.getPricePerHour().multiply(BigDecimal.valueOf(request.duration()));
+            case DAILY -> car.getPricePerDay().multiply(BigDecimal.valueOf(request.duration()));
         };
 
         Booking booking = Booking.builder()
@@ -127,22 +114,17 @@ public class BookingService {
         log.info("Cancelling booking id={}", id);
 
         Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> {
-                    log.warn("Booking cancellation failed: booking not found, id={}", id);
-                    return new ResourceNotFoundException("Booking", id);
-                });
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", id));
 
         if (booking.isCancelled()) {
-            log.warn("Booking cancellation failed: booking id={} already cancelled", id);
             throw new BookingConflictException(
                     "Booking with id %d is already cancelled".formatted(id));
         }
 
         if (booking.getStartTime().isBefore(LocalDateTime.now())) {
-            log.warn("Booking cancellation failed: booking id={} rental period already started (startTime={})",
-                    id, booking.getStartTime());
             throw new BookingConflictException(
-                    "Cannot cancel booking with id %d: rental period already started".formatted(id));
+                    "Cannot cancel booking with id %d: rental period already started at %s"
+                            .formatted(id, booking.getStartTime()));
         }
 
         booking.setCancelled(true);
