@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +23,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
     public Page<UserResponse> getAll(Pageable pageable) {
@@ -47,7 +49,19 @@ public class UserService {
                     "User with login '%s' already exists".formatted(request.login()));
         }
 
+        if (userRepository.existsByEmail(request.email())) {
+            throw new ResourceAlreadyExistsException(
+                    "User with email '%s' already exists".formatted(request.email()));
+        }
+
+        if (userRepository.existsByPhoneNumber(request.phoneNumber())) {
+            throw new ResourceAlreadyExistsException(
+                    "User with phone number '%s' already exists".formatted(request.phoneNumber()));
+        }
+
         User user = userMapper.toEntity(request);
+        user.setPassword(passwordEncoder.encode(request.password()));
+
         User saved = userRepository.save(user);
 
         log.info("User created successfully. id={}, login={}", saved.getId(), saved.getLogin());

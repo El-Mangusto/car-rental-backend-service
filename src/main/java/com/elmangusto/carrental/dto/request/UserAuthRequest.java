@@ -28,7 +28,6 @@ public record UserAuthRequest(
         String login,
 
         @NotBlank(message = "Password number is required")
-        String password,
+        String password
 
-        Role role
 ) {}

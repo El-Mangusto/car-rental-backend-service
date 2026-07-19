@@ -35,3 +35,7 @@ logging:
         orm:
           jdbc:
             bind: TRACE
+
+jwt:
+  secret: ${JWT_SECRET:k3f9X2mZ8pQwR1sT7uV4yB6nC0eH5jL9oA2dF8gI3kM=}
+  expiration-ms: 86400000
