@@ -4,14 +4,12 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
-import java.util.function.Function;
 
 @Slf4j
 @Service
@@ -35,7 +33,7 @@ public class JwtService {
         return Jwts.builder()
                 .subject(userDetails.getUsername())
                 .claim("userId", userDetails.getId())
-                .claim("role", userDetails.getUser().getRole().name())
+                .claim("role", userDetails.user().getRole().name())
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(key)

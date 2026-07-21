@@ -6,6 +6,7 @@ import com.elmangusto.carrental.entity.Booking;
 import com.elmangusto.carrental.entity.Car;
 import com.elmangusto.carrental.entity.User;
 import com.elmangusto.carrental.entity.enums.CarStatus;
+import com.elmangusto.carrental.entity.enums.Role;
 import com.elmangusto.carrental.entity.enums.UserStatus;
 import com.elmangusto.carrental.exception.BookingConflictException;
 import com.elmangusto.carrental.exception.CarUnavailableException;
@@ -15,10 +16,12 @@ import com.elmangusto.carrental.mapper.BookingMapper;
 import com.elmangusto.carrental.repository.BookingRepository;
 import com.elmangusto.carrental.repository.CarRepository;
 import com.elmangusto.carrental.repository.UserRepository;
+import com.elmangusto.carrental.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,30 +41,34 @@ public class BookingService {
     private final CarRepository carRepository;
 
     @Transactional(readOnly = true)
-    public BookingResponse getById(Long id) {
+    public BookingResponse getById(Long id, CustomUserDetails principal) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", id));
+
+        requireOwnerOrAdmin(booking, principal);
 
         return bookingMapper.toResponse(booking);
     }
 
     @Transactional(readOnly = true)
-    public Page<BookingResponse> getAll(Long userId, Pageable pageable) {
+    public Page<BookingResponse> getAll(Long userId, CustomUserDetails principal, Pageable pageable) {
+        Long effectiveUserId = resolveEffectiveUserId(userId, principal);
 
-        Page<Booking> bookings = (userId == null)
+        Page<Booking> bookings = (effectiveUserId == null)
                 ? bookingRepository.findAll(pageable)
-                : bookingRepository.findAllByUser_Id(userId, pageable);
+                : bookingRepository.findAllByUser_Id(effectiveUserId, pageable);
 
         return bookings.map(bookingMapper::toResponse);
     }
 
-    public BookingResponse create(CreateBookingRequest request) {
+    public BookingResponse create(CreateBookingRequest request, CustomUserDetails principal) {
 
         log.info("Creating booking for userId={}, carId={}, startTime={}, billingType={}, duration={}",
-                request.userId(), request.carId(), request.startTime(), request.billingType(), request.duration());
+                principal.getId(), request.carId(), request.startTime(), request.billingType(), request.duration());
 
-        User user = userRepository.findById(request.userId())
-                .orElseThrow(() -> new ResourceNotFoundException("User", request.userId()));
+        Long userId = principal.getId();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
 
         if (user.getStatus() == UserStatus.BANNED) {
             throw new UserBannedException(
@@ -109,12 +116,13 @@ public class BookingService {
         return bookingMapper.toResponse(saved);
     }
 
-    public BookingResponse cancel(Long id) {
+    public BookingResponse cancel(Long id, CustomUserDetails principal) {
 
         log.info("Cancelling booking id={}", id);
 
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", id));
+        requireOwnerOrAdmin(booking, principal);
 
         if (booking.isCancelled()) {
             throw new BookingConflictException(
@@ -134,5 +142,25 @@ public class BookingService {
         log.info("Booking id={} cancelled successfully", saved.getId());
 
         return bookingMapper.toResponse(saved);
+    }
+
+    private void requireOwnerOrAdmin(Booking booking, CustomUserDetails principal) {
+        boolean isOwner = booking.getUser().getId().equals(principal.getId());
+        boolean isAdmin = principal.user().getRole() == Role.ADMIN;
+        if (!isOwner && !isAdmin) {
+            throw new AccessDeniedException(
+                    "You are not allowed to access booking with id %d".formatted(booking.getId()));
+        }
+    }
+
+    private Long resolveEffectiveUserId(Long requestedUserId, CustomUserDetails principal) {
+        boolean isAdmin = principal.user().getRole() == Role.ADMIN;
+        if (isAdmin) {
+            return requestedUserId;
+        }
+        if (requestedUserId != null && !requestedUserId.equals(principal.getId())) {
+            throw new AccessDeniedException("You can only view your own bookings");
+        }
+        return principal.getId();
     }
 }

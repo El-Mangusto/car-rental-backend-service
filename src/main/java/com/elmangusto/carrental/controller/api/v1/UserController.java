@@ -2,6 +2,7 @@ package com.elmangusto.carrental.controller.api.v1;
 
 import com.elmangusto.carrental.dto.request.UserAuthRequest;
 import com.elmangusto.carrental.dto.response.UserResponse;
+import com.elmangusto.carrental.security.CustomUserDetails;
 import com.elmangusto.carrental.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -27,9 +29,14 @@ public class UserController {
         return userService.getAll(pageable);
     }
 
+    @GetMapping("/me")
+    public UserResponse getCurrentUser(@AuthenticationPrincipal CustomUserDetails principal) {
+        return userService.getById(principal.getId(), principal);
+    }
+
     @GetMapping("/{id}")
-    public UserResponse getById(@PathVariable Long id) {
-        return userService.getById(id);
+    public UserResponse getById(@PathVariable Long id, CustomUserDetails principal) {
+        return userService.getById(id, principal);
     }
 
     @PostMapping

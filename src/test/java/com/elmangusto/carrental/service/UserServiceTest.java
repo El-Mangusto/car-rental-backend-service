@@ -9,6 +9,7 @@ import com.elmangusto.carrental.entity.User;
 import com.elmangusto.carrental.entity.enums.Role;
 import com.elmangusto.carrental.entity.enums.UserStatus;
 import com.elmangusto.carrental.exception.ResourceAlreadyExistsException;
+import com.elmangusto.carrental.security.CustomUserDetails;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,6 +19,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -31,11 +34,17 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
+    private static final Long OWNER_ID = 1L;
+    private static final Long OTHER_USER_ID = 2L;
+
     @Mock
     private UserRepository userRepository;
 
     @Mock
     private UserMapper userMapper;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private UserService userService;
@@ -55,6 +64,9 @@ class UserServiceTest {
         when(userMapper.toEntity(request))
                 .thenReturn(user);
 
+        when(passwordEncoder.encode(request.password()))
+                .thenReturn("encodedPassword");
+
         when(userRepository.save(user))
                 .thenReturn(userSaved);
 
@@ -71,11 +83,10 @@ class UserServiceTest {
         verify(userRepository).save(user);
         verify(userMapper).toEntity(request);
         verify(userMapper).toResponse(userSaved);
-
     }
 
     @Test
-    void create_shouldThrowResourceAlreadyExistsException_whenLognAlreadyExists() {
+    void create_shouldThrowResourceAlreadyExistsException_whenLoginAlreadyExists() {
 
         UserAuthRequest request = getUserAuthRequest();
 
@@ -94,11 +105,12 @@ class UserServiceTest {
     }
 
     @Test
-    void getById_shouldReturnUser_whenUserExists() {
+    void getById_shouldReturnUser_whenRequestedByOwner() {
 
         User user = getUser();
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.USER);
 
-        when(userRepository.findById(1L))
+        when(userRepository.findById(OWNER_ID))
                 .thenReturn(Optional.of(user));
 
         UserResponse userResponse = getUserResponse();
@@ -106,26 +118,58 @@ class UserServiceTest {
         when(userMapper.toResponse(user))
                 .thenReturn(userResponse);
 
-        UserResponse result = userService.getById(1L);
+        UserResponse result = userService.getById(OWNER_ID, principal);
 
         assertThat(result).isNotNull();
         assertThat(result).isEqualTo(userResponse);
 
-        verify(userRepository).findById(1L);
+        verify(userRepository).findById(OWNER_ID);
         verify(userMapper).toResponse(user);
+    }
+
+    @Test
+    void getById_shouldReturnUser_whenRequestedByAdmin() {
+
+        User user = getUser();
+        CustomUserDetails principal = getPrincipal(OTHER_USER_ID, Role.ADMIN);
+
+        when(userRepository.findById(OWNER_ID))
+                .thenReturn(Optional.of(user));
+
+        UserResponse userResponse = getUserResponse();
+
+        when(userMapper.toResponse(user))
+                .thenReturn(userResponse);
+
+        UserResponse result = userService.getById(OWNER_ID, principal);
+
+        assertThat(result).isEqualTo(userResponse);
+    }
+
+    @Test
+    void getById_shouldThrowAccessDeniedException_whenRequestedByAnotherUser() {
+
+        CustomUserDetails principal = getPrincipal(OTHER_USER_ID, Role.USER);
+
+        assertThatThrownBy(() -> userService.getById(OWNER_ID, principal))
+                .isInstanceOf(AccessDeniedException.class);
+
+        verifyNoInteractions(userRepository, userMapper);
     }
 
     @Test
     void getById_shouldThrowResourceNotFoundException_whenUserDoesNotExist() {
 
-        when(userRepository.findById(1L))
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.USER);
+
+        when(userRepository.findById(OWNER_ID))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> userService.getById(1L))
+        assertThatThrownBy(() -> userService.getById(OWNER_ID, principal))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("1");
 
-        verify(userRepository).findById(1L);
+        verify(userRepository).findById(OWNER_ID);
     }
 
     @Test
@@ -173,10 +217,9 @@ class UserServiceTest {
         verifyNoInteractions(userMapper);
     }
 
-
     private static User getUser() {
         return User.builder()
-                .id(1L)
+                .id(OWNER_ID)
                 .email("test@gmail.com")
                 .firstName("Bob")
                 .lastName("Nikson")
@@ -189,6 +232,14 @@ class UserServiceTest {
                 .build();
     }
 
+    private static CustomUserDetails getPrincipal(Long userId, Role role) {
+        User user = User.builder()
+                .id(userId)
+                .role(role)
+                .build();
+        return new CustomUserDetails(user);
+    }
+
     private static UserAuthRequest getUserAuthRequest() {
         return new UserAuthRequest(
                 "test@gmail.com",
@@ -196,8 +247,7 @@ class UserServiceTest {
                 "Nikson",
                 "+380671111111",
                 "BobNikson_21",
-                "12345678",
-                Role.USER
+                "12345678"
         );
     }
 
