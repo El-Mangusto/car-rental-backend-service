@@ -1,6 +1,6 @@
 package com.elmangusto.carrental.controller.api.v1;
 
-import com.elmangusto.carrental.dto.request.UserAuthRequest;
+import com.elmangusto.carrental.dto.request.RegisterUserRequest;
 import com.elmangusto.carrental.dto.response.UserResponse;
 import com.elmangusto.carrental.security.CustomUserDetails;
 import com.elmangusto.carrental.service.UserService;
@@ -35,13 +35,9 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public UserResponse getById(@PathVariable Long id, CustomUserDetails principal) {
+    public UserResponse getById(@PathVariable Long id,
+                                @AuthenticationPrincipal CustomUserDetails principal) {
         return userService.getById(id, principal);
     }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public UserResponse create(@RequestBody @Valid UserAuthRequest request) {
-        return userService.create(request);
-    }
 }

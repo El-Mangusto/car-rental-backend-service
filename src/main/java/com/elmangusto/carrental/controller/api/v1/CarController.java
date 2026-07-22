@@ -1,5 +1,6 @@
 package com.elmangusto.carrental.controller.api.v1;
 
+import com.elmangusto.carrental.dto.request.ChangeCarStatusRequest;
 import com.elmangusto.carrental.dto.request.CreateCarRequest;
 import com.elmangusto.carrental.dto.response.CarResponse;
 import com.elmangusto.carrental.entity.enums.CarStatus;
@@ -41,7 +42,9 @@ public class CarController {
     }
 
     @PatchMapping ("/{id}/status")
-    public CarResponse changeStatus(@PathVariable Long id, CarStatus newStatus) {
-        return carService.changeStatus(id, newStatus);
+    public CarResponse changeStatus(
+            @PathVariable Long id,
+            @RequestBody @Valid ChangeCarStatusRequest request) {
+        return carService.changeStatus(id, request.newStatus());
     }
 }

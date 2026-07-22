@@ -1,6 +1,6 @@
 package com.elmangusto.carrental.service;
 
-import com.elmangusto.carrental.dto.request.UserAuthRequest;
+import com.elmangusto.carrental.dto.request.RegisterUserRequest;
 import com.elmangusto.carrental.dto.response.UserResponse;
 import com.elmangusto.carrental.entity.User;
 import com.elmangusto.carrental.entity.enums.Role;
@@ -47,34 +47,5 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", id));
 
         return userMapper.toResponse(user);
-    }
-
-    public UserResponse create(UserAuthRequest request) {
-
-        log.info("Creating user with login={}", request.login());
-
-        if (userRepository.existsByLogin(request.login())) {
-            throw new ResourceAlreadyExistsException(
-                    "User with login '%s' already exists".formatted(request.login()));
-        }
-
-        if (userRepository.existsByEmail(request.email())) {
-            throw new ResourceAlreadyExistsException(
-                    "User with email '%s' already exists".formatted(request.email()));
-        }
-
-        if (userRepository.existsByPhoneNumber(request.phoneNumber())) {
-            throw new ResourceAlreadyExistsException(
-                    "User with phone number '%s' already exists".formatted(request.phoneNumber()));
-        }
-
-        User user = userMapper.toEntity(request);
-        user.setPassword(passwordEncoder.encode(request.password()));
-
-        User saved = userRepository.save(user);
-
-        log.info("User created successfully. id={}, login={}", saved.getId(), saved.getLogin());
-
-        return userMapper.toResponse(saved);
     }
 }

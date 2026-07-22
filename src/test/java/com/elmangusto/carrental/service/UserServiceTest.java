@@ -1,9 +1,9 @@
 package com.elmangusto.carrental.service;
 
+import com.elmangusto.carrental.dto.request.RegisterUserRequest;
 import com.elmangusto.carrental.exception.ResourceNotFoundException;
 import com.elmangusto.carrental.mapper.UserMapper;
 import com.elmangusto.carrental.repository.UserRepository;
-import com.elmangusto.carrental.dto.request.UserAuthRequest;
 import com.elmangusto.carrental.dto.response.UserResponse;
 import com.elmangusto.carrental.entity.User;
 import com.elmangusto.carrental.entity.enums.Role;
@@ -43,66 +43,8 @@ class UserServiceTest {
     @Mock
     private UserMapper userMapper;
 
-    @Mock
-    private PasswordEncoder passwordEncoder;
-
     @InjectMocks
     private UserService userService;
-
-    @Test
-    void create_shouldSaveUser_whenLoginIsUnique() {
-
-        UserAuthRequest request = getUserAuthRequest();
-
-        User user = new User();
-        User userSaved = new User();
-        UserResponse userResponse = getUserResponse();
-
-        when(userRepository.existsByLogin("BobNikson_21"))
-                .thenReturn(false);
-
-        when(userMapper.toEntity(request))
-                .thenReturn(user);
-
-        when(passwordEncoder.encode(request.password()))
-                .thenReturn("encodedPassword");
-
-        when(userRepository.save(user))
-                .thenReturn(userSaved);
-
-        when(userMapper.toResponse(userSaved))
-                .thenReturn(userResponse);
-
-        UserResponse result = userService.create(request);
-
-        assertThat(result).isNotNull();
-        assertThat(result.login())
-                .isEqualTo("BobNikson_21");
-
-        verify(userRepository).existsByLogin("BobNikson_21");
-        verify(userRepository).save(user);
-        verify(userMapper).toEntity(request);
-        verify(userMapper).toResponse(userSaved);
-    }
-
-    @Test
-    void create_shouldThrowResourceAlreadyExistsException_whenLoginAlreadyExists() {
-
-        UserAuthRequest request = getUserAuthRequest();
-
-        when(userRepository.existsByLogin("BobNikson_21"))
-                .thenReturn(true);
-
-        assertThatThrownBy(() -> userService.create(request))
-                .isInstanceOf(ResourceAlreadyExistsException.class)
-                .hasMessageContaining("BobNikson_21");
-
-        verify(userRepository).existsByLogin("BobNikson_21");
-
-        verify(userRepository, never()).save(any());
-        verify(userMapper, never()).toEntity(any());
-        verify(userMapper, never()).toResponse(any());
-    }
 
     @Test
     void getById_shouldReturnUser_whenRequestedByOwner() {
@@ -238,17 +180,6 @@ class UserServiceTest {
                 .role(role)
                 .build();
         return new CustomUserDetails(user);
-    }
-
-    private static UserAuthRequest getUserAuthRequest() {
-        return new UserAuthRequest(
-                "test@gmail.com",
-                "Bob",
-                "Nikson",
-                "+380671111111",
-                "BobNikson_21",
-                "12345678"
-        );
     }
 
     private static UserResponse getUserResponse() {
