@@ -7,6 +7,7 @@ import com.elmangusto.carrental.entity.Booking;
 import com.elmangusto.carrental.entity.Car;
 import com.elmangusto.carrental.entity.User;
 import com.elmangusto.carrental.entity.enums.CarStatus;
+import com.elmangusto.carrental.entity.enums.Role;
 import com.elmangusto.carrental.entity.enums.UserStatus;
 import com.elmangusto.carrental.exception.BookingConflictException;
 import com.elmangusto.carrental.exception.CarUnavailableException;
@@ -16,6 +17,7 @@ import com.elmangusto.carrental.mapper.BookingMapper;
 import com.elmangusto.carrental.repository.BookingRepository;
 import com.elmangusto.carrental.repository.CarRepository;
 import com.elmangusto.carrental.repository.UserRepository;
+import com.elmangusto.carrental.security.CustomUserDetails;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -25,6 +27,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -38,6 +41,9 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class BookingServiceTest {
+
+    private static final Long OWNER_ID = 1L;
+    private static final Long OTHER_USER_ID = 2L;
 
     @Mock
     private BookingRepository bookingRepository;
@@ -58,12 +64,13 @@ class BookingServiceTest {
     void create_shouldCreateBooking_whenNoConflictingBookingsExist() {
 
         CreateBookingRequest request = getBookingRequest();
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.USER);
         User user = getUser();
         Car car = getCar();
         Booking savedBooking = getBooking();
         BookingResponse bookingResponse = getBookingResponse();
 
-        when(userRepository.findById(request.userId()))
+        when(userRepository.findById(OWNER_ID))
                 .thenReturn(Optional.of(user));
 
         when(carRepository.findById(request.carId()))
@@ -78,12 +85,12 @@ class BookingServiceTest {
         when(bookingMapper.toResponse(savedBooking))
                 .thenReturn(bookingResponse);
 
-        BookingResponse result = bookingService.create(request);
+        BookingResponse result = bookingService.create(request, principal);
 
         assertThat(result).isNotNull();
         assertThat(result).isEqualTo(bookingResponse);
 
-        verify(userRepository).findById(request.userId());
+        verify(userRepository).findById(OWNER_ID);
         verify(carRepository).findById(request.carId());
         verify(bookingRepository).findOverlappingBookings(eq(car.getId()), any(), any());
         verify(bookingRepository).save(any(Booking.class));
@@ -94,15 +101,16 @@ class BookingServiceTest {
     void create_shouldThrowResourceNotFoundException_whenUserDoesNotExist() {
 
         CreateBookingRequest request = getBookingRequest();
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.USER);
 
-        when(userRepository.findById(request.userId()))
+        when(userRepository.findById(OWNER_ID))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> bookingService.create(request))
+        assertThatThrownBy(() -> bookingService.create(request, principal))
                 .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessageContaining(request.userId().toString());
+                .hasMessageContaining(OWNER_ID.toString());
 
-        verify(userRepository).findById(request.userId());
+        verify(userRepository).findById(OWNER_ID);
         verify(carRepository, never()).findById(any());
         verify(bookingRepository, never()).findOverlappingBookings(any(), any(), any());
         verify(bookingRepository, never()).save(any());
@@ -112,15 +120,16 @@ class BookingServiceTest {
     void create_shouldThrowResourceNotFoundException_whenCarDoesNotExist() {
 
         CreateBookingRequest request = getBookingRequest();
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.USER);
         User user = getUser();
 
-        when(userRepository.findById(request.userId()))
+        when(userRepository.findById(OWNER_ID))
                 .thenReturn(Optional.of(user));
 
         when(carRepository.findById(request.carId()))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> bookingService.create(request))
+        assertThatThrownBy(() -> bookingService.create(request, principal))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining(request.carId().toString());
 
@@ -133,11 +142,12 @@ class BookingServiceTest {
     void create_shouldThrowBookingConflictException_whenOverlappingBookingsExist() {
 
         CreateBookingRequest request = getBookingRequest();
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.USER);
         User user = getUser();
         Car car = getCar();
         Booking existingBooking = getBooking();
 
-        when(userRepository.findById(request.userId()))
+        when(userRepository.findById(OWNER_ID))
                 .thenReturn(Optional.of(user));
 
         when(carRepository.findById(request.carId()))
@@ -146,7 +156,7 @@ class BookingServiceTest {
         when(bookingRepository.findOverlappingBookings(eq(car.getId()), any(), any()))
                 .thenReturn(List.of(existingBooking));
 
-        assertThatThrownBy(() -> bookingService.create(request))
+        assertThatThrownBy(() -> bookingService.create(request, principal))
                 .isInstanceOf(BookingConflictException.class)
                 .hasMessageContaining(car.getId().toString());
 
@@ -159,14 +169,15 @@ class BookingServiceTest {
     void create_shouldThrowUserBannedException_whenUserStatusIsBanned() {
 
         CreateBookingRequest request = getBookingRequest();
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.USER);
 
         User user = getUser();
         user.setStatus(UserStatus.BANNED);
 
-        when(userRepository.findById(request.userId()))
+        when(userRepository.findById(OWNER_ID))
                 .thenReturn(Optional.of(user));
 
-        assertThatThrownBy(() -> bookingService.create(request))
+        assertThatThrownBy(() -> bookingService.create(request, principal))
                 .isInstanceOf(UserBannedException.class)
                 .hasMessageContaining(user.getId().toString());
 
@@ -180,18 +191,19 @@ class BookingServiceTest {
     void create_shouldThrowCarUnavailableException_whenCarStatusIsMaintenance() {
 
         CreateBookingRequest request = getBookingRequest();
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.USER);
 
         User user = getUser();
         Car car = getCar();
         car.setStatus(CarStatus.MAINTENANCE);
 
-        when(userRepository.findById(request.userId()))
+        when(userRepository.findById(OWNER_ID))
                 .thenReturn(Optional.of(user));
 
         when(carRepository.findById(request.carId()))
                 .thenReturn(Optional.of(car));
 
-        assertThatThrownBy(() -> bookingService.create(request))
+        assertThatThrownBy(() -> bookingService.create(request, principal))
                 .isInstanceOf(CarUnavailableException.class)
                 .hasMessageContaining(car.getId().toString());
 
@@ -202,21 +214,22 @@ class BookingServiceTest {
     }
 
     @Test
-    void cancel_shouldCancelBooking_whenBookingExists() {
+    void cancel_shouldCancelBooking_whenRequestedByOwner() {
 
         Booking booking = getBooking();
         BookingResponse response = getBookingResponse();
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.USER);
 
         when(bookingRepository.findById(1L))
                 .thenReturn(Optional.of(booking));
 
-        when (bookingRepository.save((any(Booking.class))))
+        when(bookingRepository.save((any(Booking.class))))
                 .thenReturn(booking);
 
-        when (bookingMapper.toResponse(booking))
+        when(bookingMapper.toResponse(booking))
                 .thenReturn(response);
 
-        BookingResponse result = bookingService.cancel(1L);
+        BookingResponse result = bookingService.cancel(1L, principal);
 
         assertThat(result).isEqualTo(response);
         assertThat(booking.isCancelled()).isTrue();
@@ -228,12 +241,53 @@ class BookingServiceTest {
     }
 
     @Test
+    void cancel_shouldCancelBooking_whenRequestedByAdmin() {
+
+        Booking booking = getBooking();
+        BookingResponse response = getBookingResponse();
+        CustomUserDetails principal = getPrincipal(OTHER_USER_ID, Role.ADMIN);
+
+        when(bookingRepository.findById(1L))
+                .thenReturn(Optional.of(booking));
+
+        when(bookingRepository.save((any(Booking.class))))
+                .thenReturn(booking);
+
+        when(bookingMapper.toResponse(booking))
+                .thenReturn(response);
+
+        BookingResponse result = bookingService.cancel(1L, principal);
+
+        assertThat(result).isEqualTo(response);
+        assertThat(booking.isCancelled()).isTrue();
+    }
+
+    @Test
+    void cancel_shouldThrowAccessDeniedException_whenRequestedByNonOwner() {
+
+        Booking booking = getBooking();
+        CustomUserDetails principal = getPrincipal(OTHER_USER_ID, Role.USER);
+
+        when(bookingRepository.findById(1L))
+                .thenReturn(Optional.of(booking));
+
+        assertThatThrownBy(() -> bookingService.cancel(1L, principal))
+                .isInstanceOf(AccessDeniedException.class);
+
+        verify(bookingRepository).findById(1L);
+        verify(bookingRepository, never()).save(any());
+        verifyNoMoreInteractions(bookingMapper);
+    }
+
+    @Test
     void cancel_shouldThrowResourceNotFoundException_whenBookingDoesNotExist() {
+
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.USER);
 
         when(bookingRepository.findById(1L))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> bookingService.cancel(1L))
+        assertThatThrownBy(() -> bookingService.cancel(1L, principal))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Booking")
                 .hasMessageContaining("1");
@@ -245,8 +299,11 @@ class BookingServiceTest {
     @Test
     void cancel_shouldThrowBookingConflictException_whenBookingIsAlreadyCancelled() {
 
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.USER);
+
         Booking booking = Booking.builder()
                 .id(1L)
+                .user(getUser())
                 .cancelled(true)
                 .startTime(LocalDateTime.now().plusDays(1))
                 .build();
@@ -254,7 +311,7 @@ class BookingServiceTest {
         when(bookingRepository.findById(1L))
                 .thenReturn(Optional.of(booking));
 
-        assertThatThrownBy(() -> bookingService.cancel(1L))
+        assertThatThrownBy(() -> bookingService.cancel(1L, principal))
                 .isInstanceOf(BookingConflictException.class)
                 .hasMessageContaining("already cancelled");
 
@@ -265,8 +322,11 @@ class BookingServiceTest {
     @Test
     void cancel_shouldThrowBookingConflictException_whenRentalPeriodHasAlreadyStarted() {
 
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.USER);
+
         Booking booking = Booking.builder()
                 .id(1L)
+                .user(getUser())
                 .cancelled(false)
                 .startTime(LocalDateTime.now().minusMinutes(1))
                 .build();
@@ -274,7 +334,7 @@ class BookingServiceTest {
         when(bookingRepository.findById(1L))
                 .thenReturn(Optional.of(booking));
 
-        assertThatThrownBy(() -> bookingService.cancel(1L))
+        assertThatThrownBy(() -> bookingService.cancel(1L, principal))
                 .isInstanceOf(BookingConflictException.class)
                 .hasMessageContaining("rental period already started");
 
@@ -283,9 +343,10 @@ class BookingServiceTest {
     }
 
     @Test
-    void getById_shouldReturnBooking_whenBookingExists() {
+    void getById_shouldReturnBooking_whenRequestedByOwner() {
 
         Booking booking = getBooking();
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.USER);
 
         when(bookingRepository.findById(1L))
                 .thenReturn(Optional.of(booking));
@@ -295,7 +356,7 @@ class BookingServiceTest {
         when(bookingMapper.toResponse(booking))
                 .thenReturn(bookingResponse);
 
-        BookingResponse result = bookingService.getById(1L);
+        BookingResponse result = bookingService.getById(1L, principal);
 
         assertThat(result).isNotNull();
         assertThat(result).isEqualTo(bookingResponse);
@@ -305,12 +366,49 @@ class BookingServiceTest {
     }
 
     @Test
+    void getById_shouldReturnBooking_whenRequestedByAdmin() {
+
+        Booking booking = getBooking();
+        CustomUserDetails principal = getPrincipal(OTHER_USER_ID, Role.ADMIN);
+
+        when(bookingRepository.findById(1L))
+                .thenReturn(Optional.of(booking));
+
+        BookingResponse bookingResponse = getBookingResponse();
+
+        when(bookingMapper.toResponse(booking))
+                .thenReturn(bookingResponse);
+
+        BookingResponse result = bookingService.getById(1L, principal);
+
+        assertThat(result).isEqualTo(bookingResponse);
+    }
+
+    @Test
+    void getById_shouldThrowAccessDeniedException_whenRequestedByNonOwner() {
+
+        Booking booking = getBooking();
+        CustomUserDetails principal = getPrincipal(OTHER_USER_ID, Role.USER);
+
+        when(bookingRepository.findById(1L))
+                .thenReturn(Optional.of(booking));
+
+        assertThatThrownBy(() -> bookingService.getById(1L, principal))
+                .isInstanceOf(AccessDeniedException.class);
+
+        verify(bookingRepository).findById(1L);
+        verifyNoMoreInteractions(bookingMapper);
+    }
+
+    @Test
     void getById_shouldThrowResourceNotFoundException_whenBookingDoesNotExist() {
+
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.USER);
 
         when(bookingRepository.findById(1L))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> bookingService.getById(1L))
+        assertThatThrownBy(() -> bookingService.getById(1L, principal))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("1");
 
@@ -318,9 +416,10 @@ class BookingServiceTest {
     }
 
     @Test
-    void getAll_shouldReturnUserBookings_whenUserIdIsProvided() {
+    void getAll_shouldReturnOwnBookings_whenCalledByRegularUser() {
 
         Booking booking = getBooking();
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.USER);
 
         BookingResponse response = getBookingResponse();
 
@@ -328,26 +427,63 @@ class BookingServiceTest {
 
         Page<Booking> bookings = new PageImpl<>(List.of(booking));
 
-        when(bookingRepository.findAllByUser_Id(1L, pageable))
+        when(bookingRepository.findAllByUser_Id(OWNER_ID, pageable))
                 .thenReturn(bookings);
 
         when(bookingMapper.toResponse(booking))
                 .thenReturn(response);
 
-        Page<BookingResponse> result = bookingService.getAll(1L, pageable);
+        Page<BookingResponse> result = bookingService.getAll(null, principal, pageable);
 
         assertThat(result).hasSize(1);
         assertThat(result.getContent()).containsExactly(response);
 
-        verify(bookingRepository).findAllByUser_Id(1L, pageable);
+        verify(bookingRepository).findAllByUser_Id(OWNER_ID, pageable);
         verify(bookingMapper).toResponse(booking);
         verifyNoMoreInteractions(bookingRepository, bookingMapper);
     }
 
     @Test
-    void getAll_shouldReturnAllBookings_whenUserIdIsNull() {
+    void getAll_shouldThrowAccessDeniedException_whenRegularUserRequestsAnotherUsersBookings() {
+
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.USER);
+        Pageable pageable = PageRequest.of(0, 10);
+
+        assertThatThrownBy(() -> bookingService.getAll(OTHER_USER_ID, principal, pageable))
+                .isInstanceOf(AccessDeniedException.class);
+
+        verifyNoMoreInteractions(bookingRepository, bookingMapper);
+    }
+
+    @Test
+    void getAll_shouldReturnRequestedUsersBookings_whenCalledByAdmin() {
 
         Booking booking = getBooking();
+        CustomUserDetails principal = getPrincipal(OTHER_USER_ID, Role.ADMIN);
+
+        BookingResponse response = getBookingResponse();
+
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Page<Booking> bookings = new PageImpl<>(List.of(booking));
+
+        when(bookingRepository.findAllByUser_Id(OWNER_ID, pageable))
+                .thenReturn(bookings);
+
+        when(bookingMapper.toResponse(booking))
+                .thenReturn(response);
+
+        Page<BookingResponse> result = bookingService.getAll(OWNER_ID, principal, pageable);
+
+        assertThat(result).hasSize(1);
+        verify(bookingRepository).findAllByUser_Id(OWNER_ID, pageable);
+    }
+
+    @Test
+    void getAll_shouldReturnAllBookings_whenCalledByAdminWithoutUserIdFilter() {
+
+        Booking booking = getBooking();
+        CustomUserDetails principal = getPrincipal(OTHER_USER_ID, Role.ADMIN);
 
         BookingResponse response = getBookingResponse();
 
@@ -361,36 +497,28 @@ class BookingServiceTest {
         when(bookingMapper.toResponse(booking))
                 .thenReturn(response);
 
-        Page<BookingResponse> result = bookingService.getAll(null, pageable);
+        Page<BookingResponse> result = bookingService.getAll(null, principal, pageable);
 
         assertThat(result).hasSize(1);
         assertThat(result.getContent()).containsExactly(response);
 
         verify(bookingRepository).findAll(pageable);
         verify(bookingMapper).toResponse(booking);
-        verifyNoMoreInteractions(bookingRepository, bookingMapper);
-    }
-
-    @Test
-    void getAll_shouldReturnEmptyPage_whenNoBookingsExist() {
-
-        Pageable pageable = PageRequest.of(0, 10);
-
-        when(bookingRepository.findAll(pageable))
-                .thenReturn(Page.empty(pageable));
-
-        Page<BookingResponse> result = bookingService.getAll(null, pageable);
-
-        assertThat(result).isEmpty();
-
-        verify(bookingRepository).findAll(pageable);
         verifyNoMoreInteractions(bookingRepository, bookingMapper);
     }
 
     private static User getUser() {
         return User.builder()
-                .id(1L)
+                .id(OWNER_ID)
                 .build();
+    }
+
+    private static CustomUserDetails getPrincipal(Long userId, Role role) {
+        User user = User.builder()
+                .id(userId)
+                .role(role)
+                .build();
+        return new CustomUserDetails(user);
     }
 
     private static Car getCar() {
@@ -418,11 +546,9 @@ class BookingServiceTest {
     private static CreateBookingRequest getBookingRequest() {
         return new CreateBookingRequest(
                 1L,
-                1L,
                 LocalDateTime.of(2026, 7, 10, 10, 0),
                 4,
                 BillingType.HOURLY
-
         );
     }
 

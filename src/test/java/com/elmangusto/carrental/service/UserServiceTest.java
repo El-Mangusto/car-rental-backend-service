@@ -1,14 +1,15 @@
 package com.elmangusto.carrental.service;
 
+import com.elmangusto.carrental.dto.request.RegisterUserRequest;
 import com.elmangusto.carrental.exception.ResourceNotFoundException;
 import com.elmangusto.carrental.mapper.UserMapper;
 import com.elmangusto.carrental.repository.UserRepository;
-import com.elmangusto.carrental.dto.request.UserAuthRequest;
 import com.elmangusto.carrental.dto.response.UserResponse;
 import com.elmangusto.carrental.entity.User;
 import com.elmangusto.carrental.entity.enums.Role;
 import com.elmangusto.carrental.entity.enums.UserStatus;
 import com.elmangusto.carrental.exception.ResourceAlreadyExistsException;
+import com.elmangusto.carrental.security.CustomUserDetails;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,6 +19,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -31,6 +34,9 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
+    private static final Long OWNER_ID = 1L;
+    private static final Long OTHER_USER_ID = 2L;
+
     @Mock
     private UserRepository userRepository;
 
@@ -41,64 +47,12 @@ class UserServiceTest {
     private UserService userService;
 
     @Test
-    void create_shouldSaveUser_whenLoginIsUnique() {
-
-        UserAuthRequest request = getUserAuthRequest();
-
-        User user = new User();
-        User userSaved = new User();
-        UserResponse userResponse = getUserResponse();
-
-        when(userRepository.existsByLogin("BobNikson_21"))
-                .thenReturn(false);
-
-        when(userMapper.toEntity(request))
-                .thenReturn(user);
-
-        when(userRepository.save(user))
-                .thenReturn(userSaved);
-
-        when(userMapper.toResponse(userSaved))
-                .thenReturn(userResponse);
-
-        UserResponse result = userService.create(request);
-
-        assertThat(result).isNotNull();
-        assertThat(result.login())
-                .isEqualTo("BobNikson_21");
-
-        verify(userRepository).existsByLogin("BobNikson_21");
-        verify(userRepository).save(user);
-        verify(userMapper).toEntity(request);
-        verify(userMapper).toResponse(userSaved);
-
-    }
-
-    @Test
-    void create_shouldThrowResourceAlreadyExistsException_whenLognAlreadyExists() {
-
-        UserAuthRequest request = getUserAuthRequest();
-
-        when(userRepository.existsByLogin("BobNikson_21"))
-                .thenReturn(true);
-
-        assertThatThrownBy(() -> userService.create(request))
-                .isInstanceOf(ResourceAlreadyExistsException.class)
-                .hasMessageContaining("BobNikson_21");
-
-        verify(userRepository).existsByLogin("BobNikson_21");
-
-        verify(userRepository, never()).save(any());
-        verify(userMapper, never()).toEntity(any());
-        verify(userMapper, never()).toResponse(any());
-    }
-
-    @Test
-    void getById_shouldReturnUser_whenUserExists() {
+    void getById_shouldReturnUser_whenRequestedByOwner() {
 
         User user = getUser();
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.USER);
 
-        when(userRepository.findById(1L))
+        when(userRepository.findById(OWNER_ID))
                 .thenReturn(Optional.of(user));
 
         UserResponse userResponse = getUserResponse();
@@ -106,26 +60,58 @@ class UserServiceTest {
         when(userMapper.toResponse(user))
                 .thenReturn(userResponse);
 
-        UserResponse result = userService.getById(1L);
+        UserResponse result = userService.getById(OWNER_ID, principal);
 
         assertThat(result).isNotNull();
         assertThat(result).isEqualTo(userResponse);
 
-        verify(userRepository).findById(1L);
+        verify(userRepository).findById(OWNER_ID);
         verify(userMapper).toResponse(user);
+    }
+
+    @Test
+    void getById_shouldReturnUser_whenRequestedByAdmin() {
+
+        User user = getUser();
+        CustomUserDetails principal = getPrincipal(OTHER_USER_ID, Role.ADMIN);
+
+        when(userRepository.findById(OWNER_ID))
+                .thenReturn(Optional.of(user));
+
+        UserResponse userResponse = getUserResponse();
+
+        when(userMapper.toResponse(user))
+                .thenReturn(userResponse);
+
+        UserResponse result = userService.getById(OWNER_ID, principal);
+
+        assertThat(result).isEqualTo(userResponse);
+    }
+
+    @Test
+    void getById_shouldThrowAccessDeniedException_whenRequestedByAnotherUser() {
+
+        CustomUserDetails principal = getPrincipal(OTHER_USER_ID, Role.USER);
+
+        assertThatThrownBy(() -> userService.getById(OWNER_ID, principal))
+                .isInstanceOf(AccessDeniedException.class);
+
+        verifyNoInteractions(userRepository, userMapper);
     }
 
     @Test
     void getById_shouldThrowResourceNotFoundException_whenUserDoesNotExist() {
 
-        when(userRepository.findById(1L))
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.USER);
+
+        when(userRepository.findById(OWNER_ID))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> userService.getById(1L))
+        assertThatThrownBy(() -> userService.getById(OWNER_ID, principal))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("1");
 
-        verify(userRepository).findById(1L);
+        verify(userRepository).findById(OWNER_ID);
     }
 
     @Test
@@ -173,10 +159,9 @@ class UserServiceTest {
         verifyNoInteractions(userMapper);
     }
 
-
     private static User getUser() {
         return User.builder()
-                .id(1L)
+                .id(OWNER_ID)
                 .email("test@gmail.com")
                 .firstName("Bob")
                 .lastName("Nikson")
@@ -189,16 +174,12 @@ class UserServiceTest {
                 .build();
     }
 
-    private static UserAuthRequest getUserAuthRequest() {
-        return new UserAuthRequest(
-                "test@gmail.com",
-                "Bob",
-                "Nikson",
-                "+380671111111",
-                "BobNikson_21",
-                "12345678",
-                Role.USER
-        );
+    private static CustomUserDetails getPrincipal(Long userId, Role role) {
+        User user = User.builder()
+                .id(userId)
+                .role(role)
+                .build();
+        return new CustomUserDetails(user);
     }
 
     private static UserResponse getUserResponse() {
