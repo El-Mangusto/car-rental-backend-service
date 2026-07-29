@@ -22,3 +22,6 @@ logging:
     org:
       hibernate:
         SQL: WARN
+
+jwt:
+  secret: test-secret-not-for-production-use-only-in-tests

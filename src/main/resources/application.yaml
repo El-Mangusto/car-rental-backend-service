@@ -3,9 +3,9 @@ spring:
     name: car-rental-backend-service
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/car_rental
-    username: postgres
-    password: qwerty
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:car_rental}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -37,5 +37,5 @@ logging:
             bind: TRACE
 
 jwt:
-  secret: ${JWT_SECRET:k3f9X2mZ8pQwR1sT7uV4yB6nC0eH5jL9oA2dF8gI3kM=}
-  expiration-ms: 86400000
+  secret: ${JWT_SECRET}
+  expiration-ms: ${JWT_EXPIRATION_MS:86400000}
