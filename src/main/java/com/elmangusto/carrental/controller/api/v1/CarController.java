@@ -1,17 +1,13 @@
 package com.elmangusto.carrental.controller.api.v1;
 
-import com.elmangusto.carrental.dto.request.ChangeCarStatusRequest;
-import com.elmangusto.carrental.dto.request.CreateCarRequest;
-import com.elmangusto.carrental.dto.response.CarResponse;
-import com.elmangusto.carrental.entity.enums.CarStatus;
+import com.elmangusto.carrental.dto.filter.CarSearchFilter;
+import com.elmangusto.carrental.dto.response.CarPublicResponse;
 import com.elmangusto.carrental.service.CarService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 
@@ -23,28 +19,15 @@ public class CarController {
     private final CarService carService;
 
     @GetMapping
-    public Page<CarResponse> getAll(
-            @ParameterObject
-            @PageableDefault(size = 10, sort = "brand")
-            Pageable pageable) {
-        return carService.getAll(pageable);
+    public Page<CarPublicResponse> search(
+            @ParameterObject CarSearchFilter filter,
+            @ParameterObject @PageableDefault(size = 10, sort = "brand") Pageable pageable) {
+        return carService.searchAvailable(filter, pageable);
     }
 
     @GetMapping("/{id}")
-    public CarResponse getById(@PathVariable Long id) {
-        return carService.getById(id);
+    public CarPublicResponse getById(@PathVariable Long id) {
+        return carService.getPublicById(id);
     }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public CarResponse create(@RequestBody @Valid CreateCarRequest request) {
-        return carService.create(request);
-    }
-
-    @PatchMapping ("/{id}/status")
-    public CarResponse changeStatus(
-            @PathVariable Long id,
-            @RequestBody @Valid ChangeCarStatusRequest request) {
-        return carService.changeStatus(id, request.newStatus());
-    }
 }

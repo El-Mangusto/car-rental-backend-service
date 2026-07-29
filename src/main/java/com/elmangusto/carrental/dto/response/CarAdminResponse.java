@@ -6,7 +6,7 @@ import com.elmangusto.carrental.entity.enums.CarStatus;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-public record CarResponse (
+public record CarAdminResponse(
 
     Long id,
     String brand,

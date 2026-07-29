@@ -1,7 +1,11 @@
 package com.elmangusto.carrental.service;
 
+import com.elmangusto.carrental.dto.filter.CarAdminFilter;
+import com.elmangusto.carrental.dto.filter.CarFilter;
+import com.elmangusto.carrental.dto.filter.CarSearchFilter;
 import com.elmangusto.carrental.dto.request.CreateCarRequest;
-import com.elmangusto.carrental.dto.response.CarResponse;
+import com.elmangusto.carrental.dto.response.CarAdminResponse;
+import com.elmangusto.carrental.dto.response.CarPublicResponse;
 import com.elmangusto.carrental.entity.Car;
 import com.elmangusto.carrental.entity.enums.CarStatus;
 import com.elmangusto.carrental.exception.CarUnavailableException;
@@ -9,12 +13,16 @@ import com.elmangusto.carrental.exception.ResourceAlreadyExistsException;
 import com.elmangusto.carrental.exception.ResourceNotFoundException;
 import com.elmangusto.carrental.mapper.CarMapper;
 import com.elmangusto.carrental.repository.CarRepository;
+import com.elmangusto.carrental.repository.specification.CarSpecifications;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Slf4j
 @Service
@@ -26,21 +34,36 @@ public class CarService {
     private final CarMapper carMapper;
 
     @Transactional(readOnly = true)
-    public Page<CarResponse> getAll(Pageable pageable) {
-        return carRepository.findAll(pageable)
-                .map(carMapper::toResponse);
+    public Page<CarPublicResponse> searchAvailable(CarSearchFilter filter, Pageable pageable) {
+        Specification<Car> spec = buildCommonSpec(filter)
+                .and(CarSpecifications.hasStatus(CarStatus.AVAILABLE));
+
+        return carRepository.findAll(spec, pageable).map(carMapper::toPublicResponse);
     }
 
     @Transactional(readOnly = true)
-    public CarResponse getById(Long id) {
+    public Page<CarAdminResponse> searchAll(CarAdminFilter filter, Pageable pageable) {
+        Specification<Car> spec = buildCommonSpec(filter)
+                .and(CarSpecifications.hasStatus(filter.status()));
 
-        Car car = carRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Car", id));
-
-        return carMapper.toResponse(car);
+        return carRepository.findAll(spec, pageable).map(carMapper::toAdminResponse);
     }
 
-    public CarResponse create(CreateCarRequest request) {
+    public CarPublicResponse getPublicById(Long id) {
+        Car car = carRepository.findById(id)
+                .filter(c -> c.getStatus() == CarStatus.AVAILABLE)
+                .orElseThrow(() -> new ResourceNotFoundException("Car", id));
+        return carMapper.toPublicResponse(car);
+    }
+
+    @Transactional(readOnly = true)
+    public CarAdminResponse getById(Long id) {
+        Car car = carRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Car", id));
+        return carMapper.toAdminResponse(car);
+    }
+
+    public CarAdminResponse create(CreateCarRequest request) {
 
         log.info("Creating car with registrationNumber={}", request.registrationNumber());
 
@@ -55,10 +78,10 @@ public class CarService {
         log.info("Car created successfully. id={}, registrationNumber={}",
                 saved.getId(), saved.getRegistrationNumber());
 
-        return carMapper.toResponse(saved);
+        return carMapper.toAdminResponse(saved);
     }
 
-    public CarResponse changeStatus(Long id, CarStatus newStatus) {
+    public CarAdminResponse changeStatus(Long id, CarStatus newStatus) {
 
         log.info("Changing status for carId={} to newStatus={}", id, newStatus);
 
@@ -72,7 +95,7 @@ public class CarService {
 
         if (car.getStatus() == newStatus) {
             log.info("Car id={} already has status={}, no changes applied", id, newStatus);
-            return carMapper.toResponse(car);
+            return carMapper.toAdminResponse(car);
         }
 
         car.setStatus(newStatus);
@@ -81,6 +104,17 @@ public class CarService {
 
         log.info("Car id={} status changed successfully to {}", saved.getId(), saved.getStatus());
 
-        return carMapper.toResponse(saved);
+        return carMapper.toAdminResponse(saved);
+    }
+
+    private Specification<Car> buildCommonSpec(CarFilter filter) {
+        return Specification.allOf(List.of(
+                CarSpecifications.hasBrand(filter.brand()),
+                CarSpecifications.hasModel(filter.model()),
+                CarSpecifications.minPricePerHour(filter.minPricePerHour()),
+                CarSpecifications.maxPricePerHour(filter.maxPricePerHour()),
+                CarSpecifications.minPricePerDay(filter.minPricePerDay()),
+                CarSpecifications.maxPricePerDay(filter.maxPricePerDay())
+        ));
     }
 }

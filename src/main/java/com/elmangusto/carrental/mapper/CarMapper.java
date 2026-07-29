@@ -1,7 +1,8 @@
 package com.elmangusto.carrental.mapper;
 
 import com.elmangusto.carrental.dto.request.CreateCarRequest;
-import com.elmangusto.carrental.dto.response.CarResponse;
+import com.elmangusto.carrental.dto.response.CarAdminResponse;
+import com.elmangusto.carrental.dto.response.CarPublicResponse;
 import com.elmangusto.carrental.dto.response.CarSummaryResponse;
 import com.elmangusto.carrental.entity.Car;
 import com.elmangusto.carrental.entity.enums.CarStatus;
@@ -14,7 +15,9 @@ public interface CarMapper {
 
     Car toEntity(CreateCarRequest request);
 
-    CarResponse toResponse(Car car);
+    CarAdminResponse toAdminResponse(Car car);
+
+    CarPublicResponse toPublicResponse(Car car);
 
     CarSummaryResponse toSummary(Car car);
 

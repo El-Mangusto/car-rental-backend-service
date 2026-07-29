@@ -1,7 +1,10 @@
 package com.elmangusto.carrental.service;
 
+import com.elmangusto.carrental.dto.filter.CarAdminFilter;
+import com.elmangusto.carrental.dto.filter.CarSearchFilter;
 import com.elmangusto.carrental.dto.request.CreateCarRequest;
-import com.elmangusto.carrental.dto.response.CarResponse;
+import com.elmangusto.carrental.dto.response.CarAdminResponse;
+import com.elmangusto.carrental.dto.response.CarPublicResponse;
 import com.elmangusto.carrental.entity.Car;
 import com.elmangusto.carrental.entity.enums.CarStatus;
 import com.elmangusto.carrental.exception.CarUnavailableException;
@@ -18,6 +21,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -47,7 +51,7 @@ class CarServiceTest {
 
         Car car = new Car();
         Car carSaved = new Car();
-        CarResponse carResponse = getCarResponse();
+        CarAdminResponse carAdminResponse = getCarAdminResponse();
 
         when(carRepository.existsByRegistrationNumber("AA23376BC"))
                 .thenReturn(false);
@@ -58,10 +62,10 @@ class CarServiceTest {
         when(carRepository.save(car))
                 .thenReturn(carSaved);
 
-        when(carMapper.toResponse(carSaved))
-                .thenReturn(carResponse);
+        when(carMapper.toAdminResponse(carSaved))
+                .thenReturn(carAdminResponse);
 
-        CarResponse result = carService.create(request);
+        CarAdminResponse result = carService.create(request);
 
         assertThat(result).isNotNull();
         assertThat(result.registrationNumber())
@@ -70,7 +74,7 @@ class CarServiceTest {
         verify(carRepository).existsByRegistrationNumber("AA23376BC");
         verify(carRepository).save(car);
         verify(carMapper).toEntity(request);
-        verify(carMapper).toResponse(carSaved);
+        verify(carMapper).toAdminResponse(carSaved);
 
     }
 
@@ -90,7 +94,7 @@ class CarServiceTest {
 
         verify(carRepository, never()).save(any());
         verify(carMapper, never()).toEntity(any());
-        verify(carMapper, never()).toResponse(any());
+        verify(carMapper, never()).toAdminResponse(any());
     }
 
     @Test
@@ -101,18 +105,18 @@ class CarServiceTest {
         when(carRepository.findById(1L))
                 .thenReturn(Optional.of(car));
 
-        CarResponse carResponse = getCarResponse();
+        CarAdminResponse carAdminResponse = getCarAdminResponse();
 
-        when(carMapper.toResponse(car))
-                .thenReturn(carResponse);
+        when(carMapper.toAdminResponse(car))
+                .thenReturn(carAdminResponse);
 
-        CarResponse result = carService.getById(1L);
+        CarAdminResponse result = carService.getById(1L);
 
         assertThat(result).isNotNull();
-        assertThat(result).isEqualTo(carResponse);
+        assertThat(result).isEqualTo(carAdminResponse);
 
         verify(carRepository).findById(1L);
-        verify(carMapper).toResponse(car);
+        verify(carMapper).toAdminResponse(car);
     }
 
     @Test
@@ -129,48 +133,76 @@ class CarServiceTest {
     }
 
     @Test
-    void getAll_shouldReturnPageOfCars_whenCarsExist() {
+    void searchAll_shouldReturnPageOfCars_whenCarsExist() {
 
         Car car = getCar();
-        CarResponse carResponse = getCarResponse();
+        CarAdminResponse carAdminResponse = getCarAdminResponse();
+        CarAdminFilter filter = new CarAdminFilter(null, null, null, null, null, null, null);
 
         Pageable pageable = PageRequest.of(0, 10);
         Page<Car> carPage = new PageImpl<>(List.of(car));
 
-        when(carRepository.findAll(pageable))
+        when(carRepository.findAll(any(Specification.class), eq(pageable)))
                 .thenReturn(carPage);
 
-        when(carMapper.toResponse(car))
-                .thenReturn(carResponse);
+        when(carMapper.toAdminResponse(car))
+                .thenReturn(carAdminResponse);
 
-        Page<CarResponse> result = carService.getAll(pageable);
+        Page<CarAdminResponse> result = carService.searchAll(filter, pageable);
 
         assertThat(result).isNotNull();
         assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent().getFirst()).isEqualTo(carResponse);
+        assertThat(result.getContent().getFirst()).isEqualTo(carAdminResponse);
         assertThat(result.getTotalElements()).isEqualTo(1);
 
-        verify(carRepository).findAll(pageable);
-        verify(carMapper).toResponse(car);
+        verify(carRepository).findAll(any(Specification.class), eq(pageable));
+        verify(carMapper).toAdminResponse(car);
         verifyNoMoreInteractions(carRepository, carMapper);
     }
 
     @Test
-    void getAll_shouldReturnEmptyPage_whenNoCarsExist() {
+    void searchAll_shouldReturnEmptyPage_whenNoCarsExist() {
 
+        CarAdminFilter filter = new CarAdminFilter(null, null, null, null, null, null, null);
         Pageable pageable = PageRequest.of(0, 10);
         Page<Car> emptyPage = Page.empty(pageable);
 
-        when(carRepository.findAll(pageable))
+        when(carRepository.findAll(any(Specification.class), eq(pageable)))
                 .thenReturn(emptyPage);
 
-        Page<CarResponse> result = carService.getAll(pageable);
+        Page<CarAdminResponse> result = carService.searchAll(filter, pageable);
 
         assertThat(result).isNotNull();
         assertThat(result).isEmpty();
 
-        verify(carRepository).findAll(pageable);
+        verify(carRepository).findAll(any(Specification.class), eq(pageable));
         verifyNoInteractions(carMapper);
+    }
+
+    @Test
+    void searchAvailable_shouldReturnPageOfCars_whenCarsExist() {
+
+        Car car = getCar();
+        CarPublicResponse carPublicResponse = getCarPublicResponse();
+        CarSearchFilter filter = new CarSearchFilter(null, null, null, null, null, null);
+
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Car> carPage = new PageImpl<>(List.of(car));
+
+        when(carRepository.findAll(any(Specification.class), eq(pageable)))
+                .thenReturn(carPage);
+
+        when(carMapper.toPublicResponse(car))
+                .thenReturn(carPublicResponse);
+
+        Page<CarPublicResponse> result = carService.searchAvailable(filter, pageable);
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().getFirst()).isEqualTo(carPublicResponse);
+
+        verify(carRepository).findAll(any(Specification.class), eq(pageable));
+        verify(carMapper).toPublicResponse(car);
+        verifyNoMoreInteractions(carRepository, carMapper);
     }
 
     @Test
@@ -179,7 +211,7 @@ class CarServiceTest {
         Car car = getCar();
         Car saved = getCar();
         saved.setStatus(CarStatus.MAINTENANCE);
-        CarResponse response = new CarResponse(
+        CarAdminResponse response = new CarAdminResponse(
                 1L,
                 "BMW",
                 "M5",
@@ -193,20 +225,20 @@ class CarServiceTest {
         when(carRepository.findById(1L))
                 .thenReturn(Optional.of(car));
 
-        when(carMapper.toResponse(car))
+        when(carMapper.toAdminResponse(car))
                 .thenReturn(response);
 
         when(carRepository.save(car))
                 .thenReturn(saved);
 
-        CarResponse result = carService.changeStatus(1L, CarStatus.MAINTENANCE);
+        CarAdminResponse result = carService.changeStatus(1L, CarStatus.MAINTENANCE);
 
         assertThat(result).isNotNull();
         assertThat(result.status()).isEqualTo(CarStatus.MAINTENANCE);
 
         verify(carRepository).findById(1L);
         verify(carRepository).save(car);
-        verify(carMapper).toResponse(car);
+        verify(carMapper).toAdminResponse(car);
     }
 
     @Test
@@ -221,7 +253,7 @@ class CarServiceTest {
 
         verify(carRepository).findById(any(Long.class));
         verify(carRepository, never()).save(any(Car.class));
-        verify(carMapper, never()).toResponse(any(Car.class));
+        verify(carMapper, never()).toAdminResponse(any(Car.class));
     }
 
     @Test
@@ -239,7 +271,7 @@ class CarServiceTest {
 
         verify(carRepository).findById(any(Long.class));
         verify(carRepository, never()).save(any(Car.class));
-        verify(carMapper, never()).toResponse(any(Car.class));
+        verify(carMapper, never()).toAdminResponse(any(Car.class));
     }
 
 
@@ -256,14 +288,24 @@ class CarServiceTest {
                 .build();
     }
 
-    private static CarResponse getCarResponse() {
-        return new CarResponse(
+    private static CarAdminResponse getCarAdminResponse() {
+        return new CarAdminResponse(
                 1L,
                 "BMW",
                 "M5",
                 "AA23376BC",
                 LocalDate.now(),
                 CarStatus.AVAILABLE,
+                BigDecimal.valueOf(34),
+                BigDecimal.valueOf(120)
+        );
+    }
+
+    private static CarPublicResponse getCarPublicResponse() {
+        return new CarPublicResponse(
+                1L,
+                "BMW",
+                "M5",
                 BigDecimal.valueOf(34),
                 BigDecimal.valueOf(120)
         );
