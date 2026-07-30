@@ -75,7 +75,7 @@ public class BookingService {
                     "User with id %d is banned and cannot create bookings".formatted(user.getId()));
         }
 
-        Car car = carRepository.findById(request.carId())
+        Car car = carRepository.findByIdForUpdate(request.carId())
                 .orElseThrow(() -> new ResourceNotFoundException("Car", request.carId()));
 
         if (car.getStatus() != CarStatus.AVAILABLE) {
