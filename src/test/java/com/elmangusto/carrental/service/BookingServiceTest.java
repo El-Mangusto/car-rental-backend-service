@@ -73,7 +73,7 @@ class BookingServiceTest {
         when(userRepository.findById(OWNER_ID))
                 .thenReturn(Optional.of(user));
 
-        when(carRepository.findById(request.carId()))
+        when(carRepository.findByIdForUpdate(request.carId()))
                 .thenReturn(Optional.of(car));
 
         when(bookingRepository.findOverlappingBookings(eq(car.getId()), any(), any()))
@@ -91,7 +91,8 @@ class BookingServiceTest {
         assertThat(result).isEqualTo(bookingResponse);
 
         verify(userRepository).findById(OWNER_ID);
-        verify(carRepository).findById(request.carId());
+        verify(carRepository).findByIdForUpdate(request.carId());
+        verify(carRepository, never()).findById(any());
         verify(bookingRepository).findOverlappingBookings(eq(car.getId()), any(), any());
         verify(bookingRepository).save(any(Booking.class));
         verify(bookingMapper).toResponse(savedBooking);
@@ -126,14 +127,15 @@ class BookingServiceTest {
         when(userRepository.findById(OWNER_ID))
                 .thenReturn(Optional.of(user));
 
-        when(carRepository.findById(request.carId()))
+        when(carRepository.findByIdForUpdate(request.carId()))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> bookingService.create(request, principal))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining(request.carId().toString());
 
-        verify(carRepository).findById(request.carId());
+        verify(carRepository).findByIdForUpdate(request.carId());
+        verify(carRepository, never()).findById(any());
         verify(bookingRepository, never()).findOverlappingBookings(any(), any(), any());
         verify(bookingRepository, never()).save(any());
     }
@@ -150,7 +152,7 @@ class BookingServiceTest {
         when(userRepository.findById(OWNER_ID))
                 .thenReturn(Optional.of(user));
 
-        when(carRepository.findById(request.carId()))
+        when(carRepository.findByIdForUpdate(request.carId()))
                 .thenReturn(Optional.of(car));
 
         when(bookingRepository.findOverlappingBookings(eq(car.getId()), any(), any()))
@@ -200,7 +202,7 @@ class BookingServiceTest {
         when(userRepository.findById(OWNER_ID))
                 .thenReturn(Optional.of(user));
 
-        when(carRepository.findById(request.carId()))
+        when(carRepository.findByIdForUpdate(request.carId()))
                 .thenReturn(Optional.of(car));
 
         assertThatThrownBy(() -> bookingService.create(request, principal))
@@ -208,7 +210,8 @@ class BookingServiceTest {
                 .hasMessageContaining(car.getId().toString());
 
         verify(userRepository).findById(user.getId());
-        verify(carRepository).findById(car.getId());
+        verify(carRepository).findByIdForUpdate(request.carId());
+        verify(carRepository, never()).findById(any());
         verify(bookingRepository, never()).findOverlappingBookings(any(), any(), any());
         verify(bookingRepository, never()).save(any());
     }
