@@ -225,11 +225,11 @@ class CarServiceTest {
         when(carRepository.findById(1L))
                 .thenReturn(Optional.of(car));
 
-        when(carMapper.toAdminResponse(car))
-                .thenReturn(response);
-
         when(carRepository.save(car))
                 .thenReturn(saved);
+
+        when(carMapper.toAdminResponse(saved))
+                .thenReturn(response);
 
         CarAdminResponse result = carService.changeStatus(1L, CarStatus.MAINTENANCE);
 
@@ -238,7 +238,7 @@ class CarServiceTest {
 
         verify(carRepository).findById(1L);
         verify(carRepository).save(car);
-        verify(carMapper).toAdminResponse(car);
+        verify(carMapper).toAdminResponse(saved);
     }
 
     @Test

@@ -133,7 +133,7 @@ public class GlobalExceptionHandler {
         return new ErrorResponse(
                 HttpStatus.FORBIDDEN.value(),
                 HttpStatus.FORBIDDEN.getReasonPhrase(),
-                "Account is disabled",
+                "Account is banned",
                 LocalDateTime.now());
     }
 

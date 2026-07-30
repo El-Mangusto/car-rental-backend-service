@@ -25,3 +25,12 @@ logging:
 
 jwt:
   secret: test-secret-not-for-production-use-only-in-tests
+
+admin:
+  bootstrap:
+    login: test-super-admin
+    password: test-super-admin-password
+    email: test-super-admin@example.com
+    firstName: Test
+    lastName: Admin
+    phoneNumber: "+380000000000"

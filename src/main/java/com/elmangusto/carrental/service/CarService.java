@@ -85,7 +85,7 @@ public class CarService {
 
         log.info("Changing status for carId={} to newStatus={}", id, newStatus);
 
-        Car car = carRepository.findByIdForUpdate(id)
+        Car car = carRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Car", id));
 
         if (car.getStatus() == CarStatus.SCRAPPED) {
