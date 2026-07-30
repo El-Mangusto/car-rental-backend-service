@@ -55,12 +55,19 @@ public class UserService {
 
 
     @Transactional
-    public UserResponse setBanStatus(Long id,  UserStatus newStatus) {
+    public UserResponse setBanStatus(Long id,  UserStatus newStatus, CustomUserDetails principal) {
 
         log.info("Changing status for userId={} to newStatus={}", id, newStatus);
 
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", id));
+
+        boolean actorIsSuperAdmin = principal.user().getRole() == Role.SUPER_ADMIN;
+        boolean targetIsPrivileged = user.getRole() != Role.USER;
+
+        if (targetIsPrivileged && !actorIsSuperAdmin) {
+            throw new AccessDeniedException("Only a super admin can change status of an admin account");
+        }
 
         if (user.getStatus() == newStatus) {
             log.info("user id={} already has status={}, no changes applied", id, newStatus);

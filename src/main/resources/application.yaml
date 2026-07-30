@@ -39,3 +39,13 @@ logging:
 jwt:
   secret: ${JWT_SECRET}
   expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+
+
+admin:
+  bootstrap:
+    login: ${SUPER_ADMIN_BOOTSTRAP_LOGIN:super_admin}
+    password: ${SUPER_ADMIN_BOOTSTRAP_PASSWORD}
+    email: ${SUPER_ADMIN_BOOTSTRAP_EMAIL}
+    firstName: ${SUPER_ADMIN_BOOTSTRAP_FIRSTNAME}
+    lastName: ${SUPER_ADMIN_BOOTSTRAP_LASTNAME}
+    phoneNumber: ${SUPER_ADMIN_BOOTSTRAP_PHONENUMBER}

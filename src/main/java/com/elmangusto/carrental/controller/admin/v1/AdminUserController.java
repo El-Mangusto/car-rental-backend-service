@@ -36,7 +36,9 @@ public class AdminUserController {
     }
 
     @PatchMapping("/{id}/ban")
-    public UserResponse setBanStatus(@PathVariable Long id, UserStatus status) {
-        return userService.setBanStatus(id, status);
+    public UserResponse setBanStatus(@PathVariable Long id,
+                                     UserStatus status,
+                                     @AuthenticationPrincipal CustomUserDetails principal) {
+        return userService.setBanStatus(id, status, principal);
     }
 }

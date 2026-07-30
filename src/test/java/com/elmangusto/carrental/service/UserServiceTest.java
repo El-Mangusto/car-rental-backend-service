@@ -136,6 +136,7 @@ class UserServiceTest {
 
     @Test
     void setBanStatus_shouldUpdateStatus_whenUserExists() {
+        CustomUserDetails principal = getPrincipal(OTHER_USER_ID, Role.ADMIN);
 
         User user = getUser();
         User saved = getUser();
@@ -162,7 +163,7 @@ class UserServiceTest {
         when(userMapper.toResponse(saved))
                 .thenReturn(response);
 
-        UserResponse result = userService.setBanStatus(OWNER_ID, UserStatus.BANNED);
+        UserResponse result = userService.setBanStatus(OWNER_ID, UserStatus.BANNED, principal);
 
         assertThat(result).isNotNull();
         assertThat(result.status()).isEqualTo(UserStatus.BANNED);
@@ -174,6 +175,7 @@ class UserServiceTest {
 
     @Test
     void setBanStatus_shouldReturnUnchanged_whenStatusIsSame() {
+        CustomUserDetails principal = getPrincipal(OTHER_USER_ID, Role.ADMIN);
 
         User user = getUser();
         UserResponse userResponse = getUserResponse();
@@ -184,7 +186,7 @@ class UserServiceTest {
         when(userMapper.toResponse(user))
                 .thenReturn(userResponse);
 
-        UserResponse result = userService.setBanStatus(OWNER_ID, UserStatus.ACTIVE);
+        UserResponse result = userService.setBanStatus(OWNER_ID, UserStatus.ACTIVE, principal);
 
         assertThat(result).isNotNull();
         assertThat(result.status()).isEqualTo(UserStatus.ACTIVE);
@@ -196,11 +198,12 @@ class UserServiceTest {
 
     @Test
     void setBanStatus_shouldThrowResourceNotFoundException_whenUserDoesNotExist() {
+        CustomUserDetails principal = getPrincipal(OTHER_USER_ID, Role.ADMIN);
 
         when(userRepository.findById(OWNER_ID))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> userService.setBanStatus(OWNER_ID, UserStatus.BANNED))
+        assertThatThrownBy(() -> userService.setBanStatus(OWNER_ID, UserStatus.BANNED, principal))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("1");
 
