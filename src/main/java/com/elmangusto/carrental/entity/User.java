@@ -16,7 +16,8 @@ import java.math.BigDecimal;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "users_seq")
+    @SequenceGenerator(name = "users_seq", sequenceName = "users_seq", allocationSize = 50)
     private Long id;
 
     @Column(nullable = false, unique = true)
