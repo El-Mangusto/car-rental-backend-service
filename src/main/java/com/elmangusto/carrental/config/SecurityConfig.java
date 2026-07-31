@@ -50,9 +50,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/admin/users/*/role").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/v1/users").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/admin/users/*/role").hasRole("SUPER_ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/v1/users/me", "/api/v1/users/*").authenticated()
                         .anyRequest().authenticated())
                 .authenticationProvider(authenticationProvider())

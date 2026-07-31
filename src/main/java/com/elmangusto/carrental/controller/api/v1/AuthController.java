@@ -3,15 +3,11 @@ package com.elmangusto.carrental.controller.api.v1;
 import com.elmangusto.carrental.dto.request.LoginRequest;
 import com.elmangusto.carrental.dto.request.RegisterUserRequest;
 import com.elmangusto.carrental.dto.response.AuthResponse;
-import com.elmangusto.carrental.dto.response.UserResponse;
-import com.elmangusto.carrental.security.CustomUserDetails;
-import com.elmangusto.carrental.security.JwtService;
+import com.elmangusto.carrental.dto.response.UserAdminResponse;
 import com.elmangusto.carrental.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -23,7 +19,7 @@ public class AuthController {
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public UserResponse register(@RequestBody @Valid RegisterUserRequest request) {
+    public UserAdminResponse register(@RequestBody @Valid RegisterUserRequest request) {
         return authService.register(request);
     }
 
