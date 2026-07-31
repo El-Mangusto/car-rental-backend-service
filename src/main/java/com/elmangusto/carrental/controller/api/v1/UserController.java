@@ -1,6 +1,6 @@
 package com.elmangusto.carrental.controller.api.v1;
 
-import com.elmangusto.carrental.dto.response.UserResponse;
+import com.elmangusto.carrental.dto.response.UserAdminResponse;
 import com.elmangusto.carrental.security.CustomUserDetails;
 import com.elmangusto.carrental.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +15,7 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping("/me")
-    public UserResponse getCurrentUser(@AuthenticationPrincipal CustomUserDetails principal) {
+    public UserAdminResponse getCurrentUser(@AuthenticationPrincipal CustomUserDetails principal) {
         return userService.getById(principal.getId(), principal);
     }
 }

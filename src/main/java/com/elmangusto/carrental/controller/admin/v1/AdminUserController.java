@@ -1,7 +1,8 @@
 package com.elmangusto.carrental.controller.admin.v1;
 
 
-import com.elmangusto.carrental.dto.response.UserResponse;
+import com.elmangusto.carrental.dto.response.UserAdminResponse;
+import com.elmangusto.carrental.entity.enums.Role;
 import com.elmangusto.carrental.entity.enums.UserStatus;
 import com.elmangusto.carrental.security.CustomUserDetails;
 import com.elmangusto.carrental.service.UserService;
@@ -21,13 +22,13 @@ public class AdminUserController {
     private final UserService userService;
 
     @GetMapping("/{id}")
-    public UserResponse getById(@PathVariable Long id,
-                                @AuthenticationPrincipal CustomUserDetails principal) {
+    public UserAdminResponse getById(@PathVariable Long id,
+                                     @AuthenticationPrincipal CustomUserDetails principal) {
         return userService.getById(id, principal);
     }
 
     @GetMapping
-    public Page<UserResponse> getAll(
+    public Page<UserAdminResponse> getAll(
             @ParameterObject
             @PageableDefault(size = 10, sort = "login")
             Pageable pageable,
@@ -36,9 +37,15 @@ public class AdminUserController {
     }
 
     @PatchMapping("/{id}/ban")
-    public UserResponse setBanStatus(@PathVariable Long id,
-                                     UserStatus status,
-                                     @AuthenticationPrincipal CustomUserDetails principal) {
+    public UserAdminResponse setBanStatus(@PathVariable Long id,
+                                          UserStatus status,
+                                          @AuthenticationPrincipal CustomUserDetails principal) {
         return userService.setBanStatus(id, status, principal);
+    }
+
+    @PatchMapping("/{id}/role")
+    public UserAdminResponse setRole(@PathVariable Long id,
+                                     Role role) {
+        return userService.setRole(id, role);
     }
 }

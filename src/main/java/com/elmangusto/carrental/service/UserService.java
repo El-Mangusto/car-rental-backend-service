@@ -1,6 +1,6 @@
 package com.elmangusto.carrental.service;
 
-import com.elmangusto.carrental.dto.response.UserResponse;
+import com.elmangusto.carrental.dto.response.UserAdminResponse;
 import com.elmangusto.carrental.entity.User;
 import com.elmangusto.carrental.entity.enums.Role;
 import com.elmangusto.carrental.entity.enums.UserStatus;
@@ -26,7 +26,7 @@ public class UserService {
     private final UserMapper userMapper;
 
     @Transactional(readOnly = true)
-    public Page<UserResponse> getAll(Pageable pageable, CustomUserDetails principal) {
+    public Page<UserAdminResponse> getAll(Pageable pageable, CustomUserDetails principal) {
         boolean isAdmin = principal.user().getRole() == Role.ADMIN;
 
         if (!isAdmin) {
@@ -39,7 +39,7 @@ public class UserService {
 
 
     @Transactional(readOnly = true)
-    public UserResponse getById(Long id, CustomUserDetails principal) {
+    public UserAdminResponse getById(Long id, CustomUserDetails principal) {
         boolean isSelf = principal.getId().equals(id);
         boolean isAdmin = principal.user().getRole() == Role.ADMIN;
 
@@ -55,7 +55,7 @@ public class UserService {
 
 
     @Transactional
-    public UserResponse setBanStatus(Long id,  UserStatus newStatus, CustomUserDetails principal) {
+    public UserAdminResponse setBanStatus(Long id, UserStatus newStatus, CustomUserDetails principal) {
 
         log.info("Changing status for userId={} to newStatus={}", id, newStatus);
 
@@ -79,6 +79,23 @@ public class UserService {
         User saved = userRepository.save(user);
 
         log.info("User id={} status changed successfully to {}", saved.getId(), saved.getStatus());
+
+        return userMapper.toResponse(saved);
+    }
+
+    @Transactional
+    public UserAdminResponse setRole(Long id, Role newRole) {
+
+        log.info("Changing role for userId={} to newRole={}", id, newRole);
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", id));
+
+        user.setRole(newRole);
+
+        User saved = userRepository.save(user);
+
+        log.info("User id={} role changed successfully to {}", saved.getId(), saved.getRole());
 
         return userMapper.toResponse(saved);
     }

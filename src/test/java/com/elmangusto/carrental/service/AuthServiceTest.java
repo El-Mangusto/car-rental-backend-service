@@ -3,7 +3,7 @@ package com.elmangusto.carrental.service;
 import com.elmangusto.carrental.dto.request.LoginRequest;
 import com.elmangusto.carrental.dto.request.RegisterUserRequest;
 import com.elmangusto.carrental.dto.response.AuthResponse;
-import com.elmangusto.carrental.dto.response.UserResponse;
+import com.elmangusto.carrental.dto.response.UserAdminResponse;
 import com.elmangusto.carrental.entity.User;
 import com.elmangusto.carrental.entity.enums.Role;
 import com.elmangusto.carrental.entity.enums.UserStatus;
@@ -67,7 +67,7 @@ class AuthServiceTest {
 
         User user = new User();
         User userSaved = new User();
-        UserResponse userResponse = getUserResponse();
+        UserAdminResponse userAdminResponse = getUserAdminResponse();
 
         when(userRepository.existsByLogin("BobNikson_21"))
                 .thenReturn(false);
@@ -82,9 +82,9 @@ class AuthServiceTest {
                 .thenReturn(userSaved);
 
         when(userMapper.toResponse(userSaved))
-                .thenReturn(userResponse);
+                .thenReturn(userAdminResponse);
 
-        UserResponse result = authService.register(request);
+        UserAdminResponse result = authService.register(request);
 
         assertThat(result).isNotNull();
         assertThat(result.login())
@@ -188,8 +188,8 @@ class AuthServiceTest {
         );
     }
 
-    private static UserResponse getUserResponse() {
-        return new UserResponse(
+    private static UserAdminResponse getUserAdminResponse() {
+        return new UserAdminResponse(
                 1L,
                 "gmail",
                 "Bob",

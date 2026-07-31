@@ -1,9 +1,9 @@
 package com.elmangusto.carrental.service;
 
+import com.elmangusto.carrental.dto.response.UserAdminResponse;
 import com.elmangusto.carrental.exception.ResourceNotFoundException;
 import com.elmangusto.carrental.mapper.UserMapper;
 import com.elmangusto.carrental.repository.UserRepository;
-import com.elmangusto.carrental.dto.response.UserResponse;
 import com.elmangusto.carrental.entity.User;
 import com.elmangusto.carrental.entity.enums.Role;
 import com.elmangusto.carrental.entity.enums.UserStatus;
@@ -51,14 +51,14 @@ class UserServiceTest {
         when(userRepository.findById(OWNER_ID))
                 .thenReturn(Optional.of(user));
 
-        UserResponse userResponse = getUserResponse();
+        UserAdminResponse userAdminResponse = getUserAdminResponse();
 
         when(userMapper.toResponse(user))
-                .thenReturn(userResponse);
+                .thenReturn(userAdminResponse);
 
-        UserResponse result = userService.getById(OWNER_ID, principal);
+        UserAdminResponse result = userService.getById(OWNER_ID, principal);
 
-        assertThat(result).isEqualTo(userResponse);
+        assertThat(result).isEqualTo(userAdminResponse);
     }
 
     @Test
@@ -92,7 +92,7 @@ class UserServiceTest {
 
         User user = getUser();
         CustomUserDetails principal = getPrincipal(OTHER_USER_ID, Role.ADMIN);
-        UserResponse userResponse = getUserResponse();
+        UserAdminResponse userAdminResponse = getUserAdminResponse();
 
         Pageable pageable = PageRequest.of(0, 10);
         Page<User> userPage = new PageImpl<>(List.of(user));
@@ -101,13 +101,13 @@ class UserServiceTest {
                 .thenReturn(userPage);
 
         when(userMapper.toResponse(user))
-                .thenReturn(userResponse);
+                .thenReturn(userAdminResponse);
 
-        Page<UserResponse> result = userService.getAll(pageable, principal);
+        Page<UserAdminResponse> result = userService.getAll(pageable, principal);
 
         assertThat(result).isNotNull();
         assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent().getFirst()).isEqualTo(userResponse);
+        assertThat(result.getContent().getFirst()).isEqualTo(userAdminResponse);
         assertThat(result.getTotalElements()).isEqualTo(1);
 
         verify(userRepository).findAll(pageable);
@@ -125,7 +125,7 @@ class UserServiceTest {
         when(userRepository.findAll(pageable))
                 .thenReturn(emptyPage);
 
-        Page<UserResponse> result = userService.getAll(pageable, principal);
+        Page<UserAdminResponse> result = userService.getAll(pageable, principal);
 
         assertThat(result).isNotNull();
         assertThat(result).isEmpty();
@@ -142,7 +142,7 @@ class UserServiceTest {
         User saved = getUser();
         saved.setStatus(UserStatus.BANNED);
 
-        UserResponse response = new UserResponse(
+        UserAdminResponse response = new UserAdminResponse(
                 1L,
                 "gmail",
                 "Bob",
@@ -163,7 +163,7 @@ class UserServiceTest {
         when(userMapper.toResponse(saved))
                 .thenReturn(response);
 
-        UserResponse result = userService.setBanStatus(OWNER_ID, UserStatus.BANNED, principal);
+        UserAdminResponse result = userService.setBanStatus(OWNER_ID, UserStatus.BANNED, principal);
 
         assertThat(result).isNotNull();
         assertThat(result.status()).isEqualTo(UserStatus.BANNED);
@@ -178,15 +178,15 @@ class UserServiceTest {
         CustomUserDetails principal = getPrincipal(OTHER_USER_ID, Role.ADMIN);
 
         User user = getUser();
-        UserResponse userResponse = getUserResponse();
+        UserAdminResponse userAdminResponse = getUserAdminResponse();
 
         when(userRepository.findById(OWNER_ID))
                 .thenReturn(Optional.of(user));
 
         when(userMapper.toResponse(user))
-                .thenReturn(userResponse);
+                .thenReturn(userAdminResponse);
 
-        UserResponse result = userService.setBanStatus(OWNER_ID, UserStatus.ACTIVE, principal);
+        UserAdminResponse result = userService.setBanStatus(OWNER_ID, UserStatus.ACTIVE, principal);
 
         assertThat(result).isNotNull();
         assertThat(result.status()).isEqualTo(UserStatus.ACTIVE);
@@ -204,6 +204,59 @@ class UserServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> userService.setBanStatus(OWNER_ID, UserStatus.BANNED, principal))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("1");
+
+        verify(userRepository).findById(OWNER_ID);
+        verify(userRepository, never()).save(any(User.class));
+        verify(userMapper, never()).toResponse(any(User.class));
+    }
+
+    @Test
+    void setRole_shouldUpdateRole_whenUserExists() {
+
+        User user = getUser();
+        User saved = getUser();
+        saved.setRole(Role.ADMIN);
+
+        UserAdminResponse response = new UserAdminResponse(
+                1L,
+                "gmail",
+                "Bob",
+                "Nikson",
+                "+380671111111",
+                "BobNikson_21",
+                BigDecimal.ZERO,
+                Role.ADMIN,
+                UserStatus.ACTIVE
+        );
+
+        when(userRepository.findById(OWNER_ID))
+                .thenReturn(Optional.of(user));
+
+        when(userRepository.save(user))
+                .thenReturn(saved);
+
+        when(userMapper.toResponse(saved))
+                .thenReturn(response);
+
+        UserAdminResponse result = userService.setRole(OWNER_ID, Role.ADMIN);
+
+        assertThat(result).isNotNull();
+        assertThat(result.role()).isEqualTo(Role.ADMIN);
+
+        verify(userRepository).findById(OWNER_ID);
+        verify(userRepository).save(user);
+        verify(userMapper).toResponse(saved);
+    }
+
+    @Test
+    void setRole_shouldThrowResourceNotFoundException_whenUserDoesNotExist() {
+
+        when(userRepository.findById(OWNER_ID))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.setRole(OWNER_ID, Role.ADMIN))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("1");
 
@@ -236,8 +289,8 @@ class UserServiceTest {
         return new CustomUserDetails(user);
     }
 
-    private static UserResponse getUserResponse() {
-        return new UserResponse(
+    private static UserAdminResponse getUserAdminResponse() {
+        return new UserAdminResponse(
                 1L,
                 "gmail",
                 "Bob",

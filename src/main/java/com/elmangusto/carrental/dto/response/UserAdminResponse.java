@@ -5,7 +5,7 @@ import com.elmangusto.carrental.entity.enums.UserStatus;
 
 import java.math.BigDecimal;
 
-public record UserResponse(
+public record UserAdminResponse(
 
         Long id,
         String email,
