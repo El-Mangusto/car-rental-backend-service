@@ -213,11 +213,24 @@ class UserServiceTest {
     }
 
     @Test
+    void setBanStatus_shouldThrowAccessDeniedException_whenActingOnSelf() {
+
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.ADMIN);
+
+        assertThatThrownBy(() -> userService.setBanStatus(OWNER_ID, UserStatus.BANNED, principal))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("yourself");
+
+        verifyNoInteractions(userRepository, userMapper);
+    }
+
+    @Test
     void setRole_shouldUpdateRole_whenUserExists() {
 
         User user = getUser();
         User saved = getUser();
         saved.setRole(Role.ADMIN);
+        CustomUserDetails principal = getPrincipal(OTHER_USER_ID, Role.SUPER_ADMIN);
 
         UserAdminResponse response = new UserAdminResponse(
                 1L,
@@ -240,7 +253,7 @@ class UserServiceTest {
         when(userMapper.toResponse(saved))
                 .thenReturn(response);
 
-        UserAdminResponse result = userService.setRole(OWNER_ID, Role.ADMIN);
+        UserAdminResponse result = userService.setRole(OWNER_ID, Role.ADMIN, principal);
 
         assertThat(result).isNotNull();
         assertThat(result.role()).isEqualTo(Role.ADMIN);
@@ -253,10 +266,12 @@ class UserServiceTest {
     @Test
     void setRole_shouldThrowResourceNotFoundException_whenUserDoesNotExist() {
 
+        CustomUserDetails principal = getPrincipal(OTHER_USER_ID, Role.SUPER_ADMIN);
+
         when(userRepository.findById(OWNER_ID))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> userService.setRole(OWNER_ID, Role.ADMIN))
+        assertThatThrownBy(() -> userService.setRole(OWNER_ID, Role.ADMIN, principal))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("1");
 
@@ -265,6 +280,54 @@ class UserServiceTest {
         verify(userMapper, never()).toResponse(any(User.class));
     }
 
+    @Test
+    void setRole_shouldThrowAccessDeniedException_whenDowngradingOwnRole() {
+
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.ADMIN);
+
+        assertThatThrownBy(() -> userService.setRole(OWNER_ID, Role.USER, principal))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("downgrade");
+
+        verifyNoInteractions(userRepository, userMapper);
+    }
+
+    @Test
+    void setRole_shouldAllowUpgradingOwnRole() {
+
+        User user = getUser();
+        user.setRole(Role.ADMIN);
+        User saved = getUser();
+        saved.setRole(Role.SUPER_ADMIN);
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.ADMIN);
+
+        UserAdminResponse response = new UserAdminResponse(
+                1L,
+                "gmail",
+                "Bob",
+                "Nikson",
+                "+380671111111",
+                "BobNikson_21",
+                BigDecimal.ZERO,
+                Role.SUPER_ADMIN,
+                UserStatus.ACTIVE
+        );
+
+        when(userRepository.findById(OWNER_ID))
+                .thenReturn(Optional.of(user));
+
+        when(userRepository.save(user))
+                .thenReturn(saved);
+
+        when(userMapper.toResponse(saved))
+                .thenReturn(response);
+
+        UserAdminResponse result = userService.setRole(OWNER_ID, Role.SUPER_ADMIN, principal);
+
+        assertThat(result.role()).isEqualTo(Role.SUPER_ADMIN);
+
+        verify(userRepository).save(user);
+    }
 
     private static User getUser() {
         return User.builder()
