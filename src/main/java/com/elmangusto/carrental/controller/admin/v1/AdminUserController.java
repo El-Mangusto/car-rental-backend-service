@@ -45,7 +45,8 @@ public class AdminUserController {
 
     @PatchMapping("/{id}/role")
     public UserAdminResponse setRole(@PathVariable Long id,
-                                     Role role) {
-        return userService.setRole(id, role);
+                                     Role role,
+                                     @AuthenticationPrincipal CustomUserDetails principal) {
+        return userService.setRole(id, role, principal);
     }
 }

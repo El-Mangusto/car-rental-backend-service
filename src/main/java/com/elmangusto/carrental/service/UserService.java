@@ -59,6 +59,12 @@ public class UserService {
 
         log.info("Changing status for userId={} to newStatus={}", id, newStatus);
 
+        boolean isSelf = principal.getId().equals(id);
+
+        if (isSelf) {
+            throw new AccessDeniedException("You cannot ban/unban yourself");
+        }
+
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", id));
 
@@ -84,9 +90,15 @@ public class UserService {
     }
 
     @Transactional
-    public UserAdminResponse setRole(Long id, Role newRole) {
+    public UserAdminResponse setRole(Long id, Role newRole, CustomUserDetails principal) {
 
         log.info("Changing role for userId={} to newRole={}", id, newRole);
+
+        boolean isSelf = principal.getId().equals(id);
+
+        if (isSelf && newRole.ordinal() < principal.user().getRole().ordinal()) {
+            throw new AccessDeniedException("You cannot downgrade your own role");
+        }
 
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", id));
