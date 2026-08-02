@@ -1,5 +1,6 @@
 package com.elmangusto.carrental.config;
 
+import com.elmangusto.carrental.entity.enums.Role;
 import com.elmangusto.carrental.security.CustomUserDetailsService;
 import com.elmangusto.carrental.security.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +51,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                        .requestMatchers("/actuator/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/admin/users/*/role").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())

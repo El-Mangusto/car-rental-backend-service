@@ -27,12 +27,22 @@ services:
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      SUPER_ADMIN_BOOTSTRAP_PASSWORD: ${SUPER_ADMIN_BOOTSTRAP_PASSWORD}
+      SUPER_ADMIN_BOOTSTRAP_EMAIL: ${SUPER_ADMIN_BOOTSTRAP_EMAIL}
+      SUPER_ADMIN_BOOTSTRAP_FIRSTNAME: ${SUPER_ADMIN_BOOTSTRAP_FIRSTNAME}
+      SUPER_ADMIN_BOOTSTRAP_LASTNAME: ${SUPER_ADMIN_BOOTSTRAP_LASTNAME}
+      SUPER_ADMIN_BOOTSTRAP_PHONENUMBER: ${SUPER_ADMIN_BOOTSTRAP_PHONENUMBER}
     ports:
       - "8080:8080"
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --spider -q http://localhost:8080/actuator/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
 
 volumes:
   pgdata:
