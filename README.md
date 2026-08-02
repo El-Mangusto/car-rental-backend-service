@@ -89,8 +89,8 @@ Base path: `/api/v1`. Full interactive documentation is available via Swagger UI
 | GET | `/users/me` | authenticated | Current user's profile |
 | GET | `/users/{id}` | authenticated | User profile by id |
 | GET | `/users` | `ADMIN` | Paginated user list |
-| GET | `/cars` | public | Search available cars with filters |
-| GET | `/cars/{id}` | public | Public car details |
+| GET | `/cars` | authenticated | Search available cars with filters |
+| GET | `/cars/{id}` | authenticated | Public car details |
 | GET | `/bookings` | authenticated | List bookings (own / by `userId`) |
 | GET | `/bookings/{id}` | authenticated | Booking by id |
 | POST | `/bookings` | authenticated | Create a booking |
