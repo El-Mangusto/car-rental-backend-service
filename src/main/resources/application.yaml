@@ -41,6 +41,19 @@ jwt:
   expiration-ms: ${JWT_EXPIRATION_MS:86400000}
 
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,loggers,mappings
+  endpoint:
+    health:
+      show-details: when-authorized
+      roles: ADMIN,SUPER_ADMIN
+    shutdown:
+      enabled: false
+
+
 admin:
   bootstrap:
     login: ${SUPER_ADMIN_BOOTSTRAP_LOGIN:super_admin}
