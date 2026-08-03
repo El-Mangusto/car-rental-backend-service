@@ -14,6 +14,7 @@ Built entirely in Java/Spring Boot with a layered architecture (controller → s
 - [Data Model](#data-model)
 - [API](#api)
 - [Security](#security)
+- [Monitoring & Observability](#monitoring--observability)
 - [Testing](#testing)
 - [Running the Project](#running-the-project)
 - [Roadmap](#roadmap)
@@ -41,6 +42,7 @@ Built entirely in Java/Spring Boot with a layered architecture (controller → s
 | Mapping / boilerplate | MapStruct, Lombok |
 | Validation | Jakarta Bean Validation (`spring-boot-starter-validation`) |
 | Testing | JUnit 5, Mockito, Testcontainers (PostgreSQL), `@DataJpaTest`, Maven Failsafe (unit/`*IT` split), JaCoCo (coverage) |
+| Observability | Spring Boot Actuator (health with liveness/readiness groups, metrics, loggers) |
 | CI/CD | GitHub Actions |
 | Containerization | Docker (multi-stage build), Docker Compose |
 | Build | Maven (`mvnw`) |
@@ -111,6 +113,22 @@ Base path: `/api/v1`. Full interactive documentation is available via Swagger UI
 - Route-level authorization is configured declaratively in `SecurityConfig` (`authorizeHttpRequests`), with a role hierarchy where `SUPER_ADMIN` implies `ADMIN`.
 - A banned user cannot authenticate with an otherwise valid token — the filter explicitly checks `isEnabled()` and short-circuits the chain with a `DisabledException`.
 - No sessions are used (`SessionCreationPolicy.STATELESS`), and CSRF is disabled, since the API is fully token-based.
+
+## Monitoring & Observability
+
+Spring Boot Actuator is enabled for operational visibility, with access split between what an orchestrator needs and what's sensitive:
+
+| Endpoint | Access | Purpose |
+|---|---|---|
+| `/actuator/health` | public | Overall status; used by Docker's `HEALTHCHECK` |
+| `/actuator/health/liveness` `/actuator/health/readiness` | public | Kubernetes-style probe groups, auto-enabled when running in a container |
+| `/actuator/info` | public | Build name/version (populated by the `spring-boot-maven-plugin` `build-info` goal, no manual versioning) |
+| `/actuator/metrics`, `/actuator/loggers`, `/actuator/mappings` | `ADMIN` | JVM/HTTP/connection-pool metrics, runtime log-level changes, registered route inspection |
+| `/actuator/env`, `/actuator/beans`, `/actuator/shutdown`, heap/thread dumps | not exposed | Kept out of `management.endpoints.web.exposure.include` — would leak secrets or allow a remote shutdown |
+
+- Health details (e.g. database connectivity) are hidden from anonymous callers (`show-details: when-authorized`) and only shown to authenticated `ADMIN` requests, so the public health check stays a plain `UP`/`DOWN` without leaking internal state.
+- The `Dockerfile`-built image is checked via a Compose-level `HEALTHCHECK` (`wget --spider` against `/actuator/health`), so `docker compose ps` reports real `healthy`/`unhealthy` status instead of just "container is running".
+
 ## Testing
 
 The project has solid unit and integration test coverage (~1,600 lines of test code):
