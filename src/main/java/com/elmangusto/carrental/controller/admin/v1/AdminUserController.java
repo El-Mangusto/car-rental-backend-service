@@ -1,9 +1,10 @@
 package com.elmangusto.carrental.controller.admin.v1;
 
 
+import com.elmangusto.carrental.dto.request.UserRoleRequest;
+import com.elmangusto.carrental.dto.request.UserStatusRequest;
 import com.elmangusto.carrental.dto.response.UserAdminResponse;
 import com.elmangusto.carrental.entity.enums.Role;
-import com.elmangusto.carrental.entity.enums.UserStatus;
 import com.elmangusto.carrental.security.CustomUserDetails;
 import com.elmangusto.carrental.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -38,15 +39,15 @@ public class AdminUserController {
 
     @PatchMapping("/{id}/ban")
     public UserAdminResponse setBanStatus(@PathVariable Long id,
-                                          UserStatus status,
+                                          @RequestBody UserStatusRequest request,
                                           @AuthenticationPrincipal CustomUserDetails principal) {
-        return userService.setBanStatus(id, status, principal);
+        return userService.setBanStatus(id, request, principal);
     }
 
     @PatchMapping("/{id}/role")
     public UserAdminResponse setRole(@PathVariable Long id,
-                                     Role role,
+                                     @RequestBody UserRoleRequest request,
                                      @AuthenticationPrincipal CustomUserDetails principal) {
-        return userService.setRole(id, role, principal);
+        return userService.setRole(id, request, principal);
     }
 }
