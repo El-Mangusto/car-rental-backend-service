@@ -3,7 +3,7 @@ package com.elmangusto.carrental.service;
 import com.elmangusto.carrental.dto.request.LoginRequest;
 import com.elmangusto.carrental.dto.request.RegisterUserRequest;
 import com.elmangusto.carrental.dto.response.AuthResponse;
-import com.elmangusto.carrental.dto.response.UserAdminResponse;
+import com.elmangusto.carrental.dto.response.UserResponse;
 import com.elmangusto.carrental.entity.User;
 import com.elmangusto.carrental.exception.ResourceAlreadyExistsException;
 import com.elmangusto.carrental.mapper.UserMapper;
@@ -30,7 +30,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
 
-    public UserAdminResponse register(RegisterUserRequest request) {
+    public UserResponse register(RegisterUserRequest request) {
 
         log.info("Registering user with login={}", request.login());
 

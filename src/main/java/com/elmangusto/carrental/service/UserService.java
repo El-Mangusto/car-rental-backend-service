@@ -1,11 +1,12 @@
 package com.elmangusto.carrental.service;
 
+import com.elmangusto.carrental.dto.request.UserProfilePatchRequest;
 import com.elmangusto.carrental.dto.request.UserRoleRequest;
 import com.elmangusto.carrental.dto.request.UserStatusRequest;
-import com.elmangusto.carrental.dto.response.UserAdminResponse;
+import com.elmangusto.carrental.dto.response.UserResponse;
 import com.elmangusto.carrental.entity.User;
 import com.elmangusto.carrental.entity.enums.Role;
-import com.elmangusto.carrental.entity.enums.UserStatus;
+import com.elmangusto.carrental.exception.ResourceAlreadyExistsException;
 import com.elmangusto.carrental.exception.ResourceNotFoundException;
 import com.elmangusto.carrental.mapper.UserMapper;
 import com.elmangusto.carrental.repository.UserRepository;
@@ -28,7 +29,7 @@ public class UserService {
     private final UserMapper userMapper;
 
     @Transactional(readOnly = true)
-    public Page<UserAdminResponse> getAll(Pageable pageable, CustomUserDetails principal) {
+    public Page<UserResponse> getAll(Pageable pageable, CustomUserDetails principal) {
         boolean isAdmin = principal.user().getRole() == Role.ADMIN;
 
         if (!isAdmin) {
@@ -41,7 +42,7 @@ public class UserService {
 
 
     @Transactional(readOnly = true)
-    public UserAdminResponse getById(Long id, CustomUserDetails principal) {
+    public UserResponse getById(Long id, CustomUserDetails principal) {
         boolean isSelf = principal.getId().equals(id);
         boolean isAdmin = principal.user().getRole() == Role.ADMIN;
 
@@ -57,7 +58,7 @@ public class UserService {
 
 
     @Transactional
-    public UserAdminResponse setBanStatus(Long id, UserStatusRequest request, CustomUserDetails principal) {
+    public UserResponse setBanStatus(Long id, UserStatusRequest request, CustomUserDetails principal) {
 
         log.info("Changing status for userId={} to newStatus={}", id, request.status());
 
@@ -92,7 +93,7 @@ public class UserService {
     }
 
     @Transactional
-    public UserAdminResponse setRole(Long id, UserRoleRequest request, CustomUserDetails principal) {
+    public UserResponse setRole(Long id, UserRoleRequest request, CustomUserDetails principal) {
 
         log.info("Changing role for userId={} to newRole={}", id, request.role());
 
@@ -110,5 +111,47 @@ public class UserService {
         log.info("User id={} role changed successfully to {}", saved.getId(), saved.getRole());
 
         return userMapper.toResponse(saved);
+    }
+
+    public UserResponse updateProfile(Long id, UserProfilePatchRequest request, CustomUserDetails principal) {
+
+        log.info("Updating profile for userId={} to newFirstName={}, newLastName={}, newPhoneNumber={}",
+                id, request.firstName(), request.lastName(), request.phoneNumber());
+
+        if (!principal.getId().equals(id)) {
+            throw new AccessDeniedException("You can only update your own profile");
+        }
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", id));
+
+        if (request.firstName() != null) {
+            user.setFirstName(request.firstName());
+        }
+
+        if (request.lastName() != null) {
+            user.setLastName(request.lastName());
+        }
+
+        if (request.phoneNumber() != null) {
+            validatePhoneNumberAvailable(request.phoneNumber(), id);
+            user.setPhoneNumber(request.phoneNumber());
+        }
+
+        User saved = userRepository.save(user);
+
+        log.info("User id={} profile changed successfully to newFirstName={}, newLastName={}, newPhoneNumber={}",
+                id, request.firstName(), request.lastName(), request.phoneNumber());
+
+        return userMapper.toResponse(saved);
+    }
+
+    private void validatePhoneNumberAvailable(String phoneNumber, Long currentUserId) {
+        userRepository.findByPhoneNumber(phoneNumber)
+                .filter(existing -> !existing.getId().equals(currentUserId))
+                .ifPresent(existing -> {
+                    throw new ResourceAlreadyExistsException(
+                            "User with phone '%s' already exists".formatted(phoneNumber));
+                });
     }
 }
