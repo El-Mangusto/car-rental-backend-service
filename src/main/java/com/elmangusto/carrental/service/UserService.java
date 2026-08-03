@@ -1,5 +1,7 @@
 package com.elmangusto.carrental.service;
 
+import com.elmangusto.carrental.dto.request.UserRoleRequest;
+import com.elmangusto.carrental.dto.request.UserStatusRequest;
 import com.elmangusto.carrental.dto.response.UserAdminResponse;
 import com.elmangusto.carrental.entity.User;
 import com.elmangusto.carrental.entity.enums.Role;
@@ -55,9 +57,9 @@ public class UserService {
 
 
     @Transactional
-    public UserAdminResponse setBanStatus(Long id, UserStatus newStatus, CustomUserDetails principal) {
+    public UserAdminResponse setBanStatus(Long id, UserStatusRequest request, CustomUserDetails principal) {
 
-        log.info("Changing status for userId={} to newStatus={}", id, newStatus);
+        log.info("Changing status for userId={} to newStatus={}", id, request.status());
 
         boolean isSelf = principal.getId().equals(id);
 
@@ -75,12 +77,12 @@ public class UserService {
             throw new AccessDeniedException("Only a super admin can change status of an admin account");
         }
 
-        if (user.getStatus() == newStatus) {
-            log.info("user id={} already has status={}, no changes applied", id, newStatus);
+        if (user.getStatus() == request.status()) {
+            log.info("user id={} already has status={}, no changes applied", id, request.status());
             return userMapper.toResponse(user);
         }
 
-        user.setStatus(newStatus);
+        user.setStatus(request.status());
 
         User saved = userRepository.save(user);
 
@@ -90,20 +92,18 @@ public class UserService {
     }
 
     @Transactional
-    public UserAdminResponse setRole(Long id, Role newRole, CustomUserDetails principal) {
+    public UserAdminResponse setRole(Long id, UserRoleRequest request, CustomUserDetails principal) {
 
-        log.info("Changing role for userId={} to newRole={}", id, newRole);
+        log.info("Changing role for userId={} to newRole={}", id, request.role());
 
-        boolean isSelf = principal.getId().equals(id);
-
-        if (isSelf && newRole.ordinal() < principal.user().getRole().ordinal()) {
-            throw new AccessDeniedException("You cannot downgrade your own role");
+        if (principal.getId().equals(id)) {
+            throw new AccessDeniedException("You cannot change your own role");
         }
 
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", id));
 
-        user.setRole(newRole);
+        user.setRole(request.role());
 
         User saved = userRepository.save(user);
 

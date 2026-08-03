@@ -1,5 +1,7 @@
 package com.elmangusto.carrental.service;
 
+import com.elmangusto.carrental.dto.request.UserRoleRequest;
+import com.elmangusto.carrental.dto.request.UserStatusRequest;
 import com.elmangusto.carrental.dto.response.UserAdminResponse;
 import com.elmangusto.carrental.exception.ResourceNotFoundException;
 import com.elmangusto.carrental.mapper.UserMapper;
@@ -163,7 +165,9 @@ class UserServiceTest {
         when(userMapper.toResponse(saved))
                 .thenReturn(response);
 
-        UserAdminResponse result = userService.setBanStatus(OWNER_ID, UserStatus.BANNED, principal);
+        UserStatusRequest request = new UserStatusRequest(UserStatus.BANNED);
+
+        UserAdminResponse result = userService.setBanStatus(OWNER_ID, request, principal);
 
         assertThat(result).isNotNull();
         assertThat(result.status()).isEqualTo(UserStatus.BANNED);
@@ -186,7 +190,9 @@ class UserServiceTest {
         when(userMapper.toResponse(user))
                 .thenReturn(userAdminResponse);
 
-        UserAdminResponse result = userService.setBanStatus(OWNER_ID, UserStatus.ACTIVE, principal);
+        UserStatusRequest request = new UserStatusRequest(UserStatus.ACTIVE);
+
+        UserAdminResponse result = userService.setBanStatus(OWNER_ID, request, principal);
 
         assertThat(result).isNotNull();
         assertThat(result.status()).isEqualTo(UserStatus.ACTIVE);
@@ -203,7 +209,9 @@ class UserServiceTest {
         when(userRepository.findById(OWNER_ID))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> userService.setBanStatus(OWNER_ID, UserStatus.BANNED, principal))
+        UserStatusRequest request = new UserStatusRequest(UserStatus.BANNED);
+
+        assertThatThrownBy(() -> userService.setBanStatus(OWNER_ID, request, principal))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("1");
 
@@ -217,7 +225,9 @@ class UserServiceTest {
 
         CustomUserDetails principal = getPrincipal(OWNER_ID, Role.ADMIN);
 
-        assertThatThrownBy(() -> userService.setBanStatus(OWNER_ID, UserStatus.BANNED, principal))
+        UserStatusRequest request = new UserStatusRequest(UserStatus.BANNED);
+
+        assertThatThrownBy(() -> userService.setBanStatus(OWNER_ID, request, principal))
                 .isInstanceOf(AccessDeniedException.class)
                 .hasMessageContaining("yourself");
 
@@ -253,7 +263,9 @@ class UserServiceTest {
         when(userMapper.toResponse(saved))
                 .thenReturn(response);
 
-        UserAdminResponse result = userService.setRole(OWNER_ID, Role.ADMIN, principal);
+        UserRoleRequest request = new UserRoleRequest(Role.ADMIN);
+
+        UserAdminResponse result = userService.setRole(OWNER_ID, request, principal);
 
         assertThat(result).isNotNull();
         assertThat(result.role()).isEqualTo(Role.ADMIN);
@@ -271,7 +283,9 @@ class UserServiceTest {
         when(userRepository.findById(OWNER_ID))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> userService.setRole(OWNER_ID, Role.ADMIN, principal))
+        UserRoleRequest request = new UserRoleRequest(Role.ADMIN);
+
+        assertThatThrownBy(() -> userService.setRole(OWNER_ID, request, principal))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("1");
 
@@ -281,52 +295,17 @@ class UserServiceTest {
     }
 
     @Test
-    void setRole_shouldThrowAccessDeniedException_whenDowngradingOwnRole() {
+    void setRole_shouldThrowAccessDeniedException_whenActingOnSelf() {
 
-        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.ADMIN);
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.SUPER_ADMIN);
 
-        assertThatThrownBy(() -> userService.setRole(OWNER_ID, Role.USER, principal))
+        UserRoleRequest request = new UserRoleRequest(Role.ADMIN);
+
+        assertThatThrownBy(() -> userService.setRole(OWNER_ID, request, principal))
                 .isInstanceOf(AccessDeniedException.class)
-                .hasMessageContaining("downgrade");
+                .hasMessageContaining("own role");
 
         verifyNoInteractions(userRepository, userMapper);
-    }
-
-    @Test
-    void setRole_shouldAllowUpgradingOwnRole() {
-
-        User user = getUser();
-        user.setRole(Role.ADMIN);
-        User saved = getUser();
-        saved.setRole(Role.SUPER_ADMIN);
-        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.ADMIN);
-
-        UserAdminResponse response = new UserAdminResponse(
-                1L,
-                "gmail",
-                "Bob",
-                "Nikson",
-                "+380671111111",
-                "BobNikson_21",
-                BigDecimal.ZERO,
-                Role.SUPER_ADMIN,
-                UserStatus.ACTIVE
-        );
-
-        when(userRepository.findById(OWNER_ID))
-                .thenReturn(Optional.of(user));
-
-        when(userRepository.save(user))
-                .thenReturn(saved);
-
-        when(userMapper.toResponse(saved))
-                .thenReturn(response);
-
-        UserAdminResponse result = userService.setRole(OWNER_ID, Role.SUPER_ADMIN, principal);
-
-        assertThat(result.role()).isEqualTo(Role.SUPER_ADMIN);
-
-        verify(userRepository).save(user);
     }
 
     private static User getUser() {
