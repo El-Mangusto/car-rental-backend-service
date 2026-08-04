@@ -6,6 +6,7 @@ import com.elmangusto.carrental.dto.request.UserStatusRequest;
 import com.elmangusto.carrental.dto.response.UserResponse;
 import com.elmangusto.carrental.security.CustomUserDetails;
 import com.elmangusto.carrental.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
@@ -38,14 +39,14 @@ public class AdminUserController {
 
     @PatchMapping("/{id}/ban")
     public UserResponse setBanStatus(@PathVariable Long id,
-                                     @RequestBody UserStatusRequest request,
+                                     @RequestBody @Valid UserStatusRequest request,
                                      @AuthenticationPrincipal CustomUserDetails principal) {
         return userService.setBanStatus(id, request, principal);
     }
 
     @PatchMapping("/{id}/role")
     public UserResponse setRole(@PathVariable Long id,
-                                @RequestBody UserRoleRequest request,
+                                @RequestBody @Valid UserRoleRequest request,
                                 @AuthenticationPrincipal CustomUserDetails principal) {
         return userService.setRole(id, request, principal);
     }

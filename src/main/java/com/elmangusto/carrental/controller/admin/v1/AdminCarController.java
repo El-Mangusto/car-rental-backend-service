@@ -3,6 +3,7 @@ package com.elmangusto.carrental.controller.admin.v1;
 import com.elmangusto.carrental.dto.filter.CarAdminFilter;
 import com.elmangusto.carrental.dto.request.ChangeCarStatusRequest;
 import com.elmangusto.carrental.dto.request.CreateCarRequest;
+import com.elmangusto.carrental.dto.request.UpdateCarRequest;
 import com.elmangusto.carrental.dto.response.CarAdminResponse;
 import com.elmangusto.carrental.service.CarService;
 import jakarta.validation.Valid;
@@ -45,4 +46,13 @@ public class AdminCarController {
             @RequestBody @Valid ChangeCarStatusRequest request) {
         return carService.changeStatus(id, request.newStatus());
     }
+
+    @PatchMapping("/{id}")
+    public CarAdminResponse updateCar(
+            @PathVariable Long id,
+            @RequestBody @Valid UpdateCarRequest request) {
+        return carService.updateCar(id, request);
+    }
+
+
 }

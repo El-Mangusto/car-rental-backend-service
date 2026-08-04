@@ -4,6 +4,7 @@ import com.elmangusto.carrental.dto.request.UserProfilePatchRequest;
 import com.elmangusto.carrental.dto.response.UserResponse;
 import com.elmangusto.carrental.security.CustomUserDetails;
 import com.elmangusto.carrental.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -22,7 +23,7 @@ public class UserController {
 
     @PatchMapping("/{id}")
     public UserResponse updateProfile(@PathVariable Long id,
-                                      @RequestBody UserProfilePatchRequest request,
+                                      @RequestBody @Valid UserProfilePatchRequest request,
                                       CustomUserDetails principal) {
         return userService.updateProfile(id, request, principal);
     }
