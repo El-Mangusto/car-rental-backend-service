@@ -3,6 +3,7 @@ package com.elmangusto.carrental.service;
 import com.elmangusto.carrental.dto.filter.CarAdminFilter;
 import com.elmangusto.carrental.dto.filter.CarSearchFilter;
 import com.elmangusto.carrental.dto.request.CreateCarRequest;
+import com.elmangusto.carrental.dto.request.UpdateCarRequest;
 import com.elmangusto.carrental.dto.response.CarAdminResponse;
 import com.elmangusto.carrental.dto.response.CarPublicResponse;
 import com.elmangusto.carrental.entity.Car;
@@ -272,6 +273,183 @@ class CarServiceTest {
         verify(carRepository).findById(any(Long.class));
         verify(carRepository, never()).save(any(Car.class));
         verify(carMapper, never()).toAdminResponse(any(Car.class));
+    }
+
+    @Test
+    void updateCar_shouldUpdateAllFields_whenRequestHasAllFields() {
+
+        Car car = getCar();
+        Car saved = getCar();
+        saved.setBrand("Audi");
+        saved.setModel("A6");
+        saved.setPricePerDay(BigDecimal.valueOf(150));
+
+        UpdateCarRequest request = new UpdateCarRequest(
+                "Audi", "A6", null, null, null, BigDecimal.valueOf(150)
+        );
+
+        CarAdminResponse response = new CarAdminResponse(
+                1L, "Audi", "A6", "AA23376BC", LocalDate.now(),
+                CarStatus.AVAILABLE, BigDecimal.valueOf(34), BigDecimal.valueOf(150)
+        );
+
+        when(carRepository.findById(1L))
+                .thenReturn(Optional.of(car));
+
+        when(carRepository.save(car))
+                .thenReturn(saved);
+
+        when(carMapper.toAdminResponse(saved))
+                .thenReturn(response);
+
+        CarAdminResponse result = carService.updateCar(1L, request);
+
+        assertThat(result).isNotNull();
+        assertThat(result.brand()).isEqualTo("Audi");
+        assertThat(result.model()).isEqualTo("A6");
+        assertThat(result.pricePerDay()).isEqualTo(BigDecimal.valueOf(150));
+
+        verify(carRepository).findById(1L);
+        verify(carRepository).save(car);
+        verify(carMapper).toAdminResponse(saved);
+    }
+
+    @Test
+    void updateCar_shouldNotChangeAnything_whenAllFieldsAreNull() {
+
+        Car car = getCar();
+        CarAdminResponse response = getCarAdminResponse();
+
+        UpdateCarRequest request = new UpdateCarRequest(
+                null, null, null, null, null, null
+        );
+
+        when(carRepository.findById(1L))
+                .thenReturn(Optional.of(car));
+
+        when(carRepository.save(car))
+                .thenReturn(car);
+
+        when(carMapper.toAdminResponse(car))
+                .thenReturn(response);
+
+        CarAdminResponse result = carService.updateCar(1L, request);
+
+        assertThat(result).isNotNull();
+
+        verify(carRepository).findById(1L);
+        verify(carRepository).save(car);
+        verify(carMapper).toAdminResponse(car);
+    }
+
+    @Test
+    void updateCar_shouldThrowResourceNotFoundException_whenCarDoesNotExist() {
+
+        UpdateCarRequest request = new UpdateCarRequest(
+                "Audi", null, null, null, null, null
+        );
+
+        when(carRepository.findById(1L))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> carService.updateCar(1L, request))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("1");
+
+        verify(carRepository).findById(1L);
+        verify(carRepository, never()).save(any(Car.class));
+        verify(carMapper, never()).toAdminResponse(any(Car.class));
+    }
+
+    @Test
+    void updateCar_shouldUpdateRegistrationNumber_whenNewNumberIsUnique() {
+
+        Car car = getCar();
+        Car saved = getCar();
+        saved.setRegistrationNumber("BB99887CC");
+
+        UpdateCarRequest request = new UpdateCarRequest(
+                null, null, "BB99887CC", null, null, null
+        );
+
+        CarAdminResponse response = new CarAdminResponse(
+                1L, "BMW", "M5", "BB99887CC", LocalDate.now(),
+                CarStatus.AVAILABLE, BigDecimal.valueOf(34), BigDecimal.valueOf(120)
+        );
+
+        when(carRepository.findById(1L))
+                .thenReturn(Optional.of(car));
+
+        when(carRepository.findByRegistrationNumber("BB99887CC"))
+                .thenReturn(Optional.empty());
+
+        when(carRepository.save(car))
+                .thenReturn(saved);
+
+        when(carMapper.toAdminResponse(saved))
+                .thenReturn(response);
+
+        CarAdminResponse result = carService.updateCar(1L, request);
+
+        assertThat(result.registrationNumber()).isEqualTo("BB99887CC");
+
+        verify(carRepository).findByRegistrationNumber("BB99887CC");
+        verify(carRepository).save(car);
+    }
+
+    @Test
+    void updateCar_shouldThrowResourceAlreadyExistsException_whenRegistrationNumberTakenByAnotherCar() {
+
+        Car car = getCar();
+        Car anotherCar = getCar();
+        anotherCar.setId(2L);
+        anotherCar.setRegistrationNumber("BB99887CC");
+
+        UpdateCarRequest request = new UpdateCarRequest(
+                null, null, "BB99887CC", null, null, null
+        );
+
+        when(carRepository.findById(1L))
+                .thenReturn(Optional.of(car));
+
+        when(carRepository.findByRegistrationNumber("BB99887CC"))
+                .thenReturn(Optional.of(anotherCar));
+
+        assertThatThrownBy(() -> carService.updateCar(1L, request))
+                .isInstanceOf(ResourceAlreadyExistsException.class)
+                .hasMessageContaining("BB99887CC");
+
+        verify(carRepository, never()).save(any(Car.class));
+        verify(carMapper, never()).toAdminResponse(any(Car.class));
+    }
+
+    @Test
+    void updateCar_shouldNotThrow_whenRegistrationNumberUnchanged() {
+
+        Car car = getCar();
+        CarAdminResponse response = getCarAdminResponse();
+
+        UpdateCarRequest request = new UpdateCarRequest(
+                null, null, "AA23376BC", null, null, null
+        );
+
+        when(carRepository.findById(1L))
+                .thenReturn(Optional.of(car));
+
+        when(carRepository.findByRegistrationNumber("AA23376BC"))
+                .thenReturn(Optional.of(car));
+
+        when(carRepository.save(car))
+                .thenReturn(car);
+
+        when(carMapper.toAdminResponse(car))
+                .thenReturn(response);
+
+        CarAdminResponse result = carService.updateCar(1L, request);
+
+        assertThat(result).isNotNull();
+
+        verify(carRepository).save(car);
     }
 
 

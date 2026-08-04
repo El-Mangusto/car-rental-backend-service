@@ -1,6 +1,7 @@
 package com.elmangusto.carrental.repository;
 
 import com.elmangusto.carrental.entity.Car;
+import com.elmangusto.carrental.entity.User;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -15,6 +16,8 @@ import java.util.Optional;
 public interface CarRepository extends JpaRepository<Car, Long>, JpaSpecificationExecutor<Car> {
 
     boolean existsByRegistrationNumber(String registrationNumber);
+
+    Optional<Car> findByRegistrationNumber(String phoneNumber);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT c FROM Car c WHERE c.id = :id")

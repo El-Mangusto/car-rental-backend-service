@@ -4,6 +4,7 @@ import com.elmangusto.carrental.dto.filter.CarAdminFilter;
 import com.elmangusto.carrental.dto.filter.CarFilter;
 import com.elmangusto.carrental.dto.filter.CarSearchFilter;
 import com.elmangusto.carrental.dto.request.CreateCarRequest;
+import com.elmangusto.carrental.dto.request.UpdateCarRequest;
 import com.elmangusto.carrental.dto.response.CarAdminResponse;
 import com.elmangusto.carrental.dto.response.CarPublicResponse;
 import com.elmangusto.carrental.entity.Car;
@@ -105,6 +106,60 @@ public class CarService {
         log.info("Car id={} status changed successfully to {}", saved.getId(), saved.getStatus());
 
         return carMapper.toAdminResponse(saved);
+    }
+
+    public CarAdminResponse updateCar(Long id, UpdateCarRequest request) {
+
+        log.info("Updating car for carId={} to newBrand={}, newModel={}, newRegistrationNumber={}," +
+                        " newDateRegistration={}, newPricePerHour={}, newPricePerDay={}",
+                id, request.brand(), request.model(), request.registrationNumber(), request.dateRegistration(),
+                request.pricePerHour(), request.pricePerDay());
+
+        Car car = carRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Car", id));
+
+        if (request.brand() != null) {
+            car.setBrand(request.brand());
+        }
+
+        if (request.model() != null) {
+            car.setModel(request.model());
+        }
+
+        if (request.registrationNumber() != null) {
+            validateRegistrationNumberAvailable(request.registrationNumber(), id);
+            car.setRegistrationNumber(request.registrationNumber());
+        }
+
+        if (request.dateRegistration() != null) {
+            car.setDateRegistration(request.dateRegistration());
+        }
+
+        if (request.pricePerHour() != null) {
+            car.setPricePerHour(request.pricePerHour());
+        }
+
+        if (request.pricePerDay() != null) {
+            car.setPricePerDay(request.pricePerDay());
+        }
+
+        Car saved = carRepository.save(car);
+
+        log.info("Car carId={} changed successfully to newBrand={}, newModel={}, newRegistrationNumber={}," +
+                        " newDateRegistration={}, newPricePerHour={}, newPricePerDay={}",
+                id, request.brand(), request.model(), request.registrationNumber(), request.dateRegistration(),
+                request.pricePerHour(), request.pricePerDay());
+
+        return carMapper.toAdminResponse(saved);
+    }
+
+    private void validateRegistrationNumberAvailable(String registrationNumber, Long currentCarId) {
+        carRepository.findByRegistrationNumber(registrationNumber)
+                .filter(existing -> !existing.getId().equals(currentCarId))
+                .ifPresent(existing -> {
+                    throw new ResourceAlreadyExistsException(
+                            "Car with registration number '%s' already exists".formatted(registrationNumber));
+                });
     }
 
     private Specification<Car> buildCommonSpec(CarFilter filter) {

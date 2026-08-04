@@ -3,10 +3,10 @@ package com.elmangusto.carrental.controller.admin.v1;
 
 import com.elmangusto.carrental.dto.request.UserRoleRequest;
 import com.elmangusto.carrental.dto.request.UserStatusRequest;
-import com.elmangusto.carrental.dto.response.UserAdminResponse;
-import com.elmangusto.carrental.entity.enums.Role;
+import com.elmangusto.carrental.dto.response.UserResponse;
 import com.elmangusto.carrental.security.CustomUserDetails;
 import com.elmangusto.carrental.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
@@ -23,13 +23,13 @@ public class AdminUserController {
     private final UserService userService;
 
     @GetMapping("/{id}")
-    public UserAdminResponse getById(@PathVariable Long id,
-                                     @AuthenticationPrincipal CustomUserDetails principal) {
+    public UserResponse getById(@PathVariable Long id,
+                                @AuthenticationPrincipal CustomUserDetails principal) {
         return userService.getById(id, principal);
     }
 
     @GetMapping
-    public Page<UserAdminResponse> getAll(
+    public Page<UserResponse> getAll(
             @ParameterObject
             @PageableDefault(size = 10, sort = "login")
             Pageable pageable,
@@ -38,16 +38,16 @@ public class AdminUserController {
     }
 
     @PatchMapping("/{id}/ban")
-    public UserAdminResponse setBanStatus(@PathVariable Long id,
-                                          @RequestBody UserStatusRequest request,
-                                          @AuthenticationPrincipal CustomUserDetails principal) {
+    public UserResponse setBanStatus(@PathVariable Long id,
+                                     @RequestBody @Valid UserStatusRequest request,
+                                     @AuthenticationPrincipal CustomUserDetails principal) {
         return userService.setBanStatus(id, request, principal);
     }
 
     @PatchMapping("/{id}/role")
-    public UserAdminResponse setRole(@PathVariable Long id,
-                                     @RequestBody UserRoleRequest request,
-                                     @AuthenticationPrincipal CustomUserDetails principal) {
+    public UserResponse setRole(@PathVariable Long id,
+                                @RequestBody @Valid UserRoleRequest request,
+                                @AuthenticationPrincipal CustomUserDetails principal) {
         return userService.setRole(id, request, principal);
     }
 }

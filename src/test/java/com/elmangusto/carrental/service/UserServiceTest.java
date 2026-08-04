@@ -1,8 +1,10 @@
 package com.elmangusto.carrental.service;
 
+import com.elmangusto.carrental.dto.request.UserProfilePatchRequest;
 import com.elmangusto.carrental.dto.request.UserRoleRequest;
 import com.elmangusto.carrental.dto.request.UserStatusRequest;
-import com.elmangusto.carrental.dto.response.UserAdminResponse;
+import com.elmangusto.carrental.dto.response.UserResponse;
+import com.elmangusto.carrental.exception.ResourceAlreadyExistsException;
 import com.elmangusto.carrental.exception.ResourceNotFoundException;
 import com.elmangusto.carrental.mapper.UserMapper;
 import com.elmangusto.carrental.repository.UserRepository;
@@ -53,14 +55,14 @@ class UserServiceTest {
         when(userRepository.findById(OWNER_ID))
                 .thenReturn(Optional.of(user));
 
-        UserAdminResponse userAdminResponse = getUserAdminResponse();
+        UserResponse userResponse = getUserResponse();
 
         when(userMapper.toResponse(user))
-                .thenReturn(userAdminResponse);
+                .thenReturn(userResponse);
 
-        UserAdminResponse result = userService.getById(OWNER_ID, principal);
+        UserResponse result = userService.getById(OWNER_ID, principal);
 
-        assertThat(result).isEqualTo(userAdminResponse);
+        assertThat(result).isEqualTo(userResponse);
     }
 
     @Test
@@ -94,7 +96,7 @@ class UserServiceTest {
 
         User user = getUser();
         CustomUserDetails principal = getPrincipal(OTHER_USER_ID, Role.ADMIN);
-        UserAdminResponse userAdminResponse = getUserAdminResponse();
+        UserResponse userResponse = getUserResponse();
 
         Pageable pageable = PageRequest.of(0, 10);
         Page<User> userPage = new PageImpl<>(List.of(user));
@@ -103,13 +105,13 @@ class UserServiceTest {
                 .thenReturn(userPage);
 
         when(userMapper.toResponse(user))
-                .thenReturn(userAdminResponse);
+                .thenReturn(userResponse);
 
-        Page<UserAdminResponse> result = userService.getAll(pageable, principal);
+        Page<UserResponse> result = userService.getAll(pageable, principal);
 
         assertThat(result).isNotNull();
         assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent().getFirst()).isEqualTo(userAdminResponse);
+        assertThat(result.getContent().getFirst()).isEqualTo(userResponse);
         assertThat(result.getTotalElements()).isEqualTo(1);
 
         verify(userRepository).findAll(pageable);
@@ -127,7 +129,7 @@ class UserServiceTest {
         when(userRepository.findAll(pageable))
                 .thenReturn(emptyPage);
 
-        Page<UserAdminResponse> result = userService.getAll(pageable, principal);
+        Page<UserResponse> result = userService.getAll(pageable, principal);
 
         assertThat(result).isNotNull();
         assertThat(result).isEmpty();
@@ -144,7 +146,7 @@ class UserServiceTest {
         User saved = getUser();
         saved.setStatus(UserStatus.BANNED);
 
-        UserAdminResponse response = new UserAdminResponse(
+        UserResponse response = new UserResponse(
                 1L,
                 "gmail",
                 "Bob",
@@ -167,7 +169,7 @@ class UserServiceTest {
 
         UserStatusRequest request = new UserStatusRequest(UserStatus.BANNED);
 
-        UserAdminResponse result = userService.setBanStatus(OWNER_ID, request, principal);
+        UserResponse result = userService.setBanStatus(OWNER_ID, request, principal);
 
         assertThat(result).isNotNull();
         assertThat(result.status()).isEqualTo(UserStatus.BANNED);
@@ -182,17 +184,17 @@ class UserServiceTest {
         CustomUserDetails principal = getPrincipal(OTHER_USER_ID, Role.ADMIN);
 
         User user = getUser();
-        UserAdminResponse userAdminResponse = getUserAdminResponse();
+        UserResponse userResponse = getUserResponse();
 
         when(userRepository.findById(OWNER_ID))
                 .thenReturn(Optional.of(user));
 
         when(userMapper.toResponse(user))
-                .thenReturn(userAdminResponse);
+                .thenReturn(userResponse);
 
         UserStatusRequest request = new UserStatusRequest(UserStatus.ACTIVE);
 
-        UserAdminResponse result = userService.setBanStatus(OWNER_ID, request, principal);
+        UserResponse result = userService.setBanStatus(OWNER_ID, request, principal);
 
         assertThat(result).isNotNull();
         assertThat(result.status()).isEqualTo(UserStatus.ACTIVE);
@@ -242,7 +244,7 @@ class UserServiceTest {
         saved.setRole(Role.ADMIN);
         CustomUserDetails principal = getPrincipal(OTHER_USER_ID, Role.SUPER_ADMIN);
 
-        UserAdminResponse response = new UserAdminResponse(
+        UserResponse response = new UserResponse(
                 1L,
                 "gmail",
                 "Bob",
@@ -265,7 +267,7 @@ class UserServiceTest {
 
         UserRoleRequest request = new UserRoleRequest(Role.ADMIN);
 
-        UserAdminResponse result = userService.setRole(OWNER_ID, request, principal);
+        UserResponse result = userService.setRole(OWNER_ID, request, principal);
 
         assertThat(result).isNotNull();
         assertThat(result.role()).isEqualTo(Role.ADMIN);
@@ -308,6 +310,196 @@ class UserServiceTest {
         verifyNoInteractions(userRepository, userMapper);
     }
 
+    @Test
+    void updateProfile_shouldUpdateAllFields_whenUserUpdatesOwnProfile() {
+
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.USER);
+
+        User user = getUser();
+        User saved = getUser();
+        saved.setFirstName("John");
+        saved.setLastName("Doe");
+        saved.setPhoneNumber("380672222222");
+
+        UserResponse response = new UserResponse(
+                1L,
+                "gmail",
+                "John",
+                "Doe",
+                "+380672222222",
+                "BobNikson_21",
+                BigDecimal.ZERO,
+                Role.USER,
+                UserStatus.ACTIVE
+        );
+
+        when(userRepository.findById(OWNER_ID))
+                .thenReturn(Optional.of(user));
+
+        when(userRepository.findByPhoneNumber("380672222222"))
+                .thenReturn(Optional.empty());
+
+        when(userRepository.save(user))
+                .thenReturn(saved);
+
+        when(userMapper.toResponse(saved))
+                .thenReturn(response);
+
+        UserProfilePatchRequest request = new UserProfilePatchRequest("John", "Doe", "380672222222");
+
+        UserResponse result = userService.updateProfile(OWNER_ID, request, principal);
+
+        assertThat(result).isNotNull();
+        assertThat(result.firstName()).isEqualTo("John");
+        assertThat(result.lastName()).isEqualTo("Doe");
+        assertThat(result.phoneNumber()).isEqualTo("+380672222222");
+
+        verify(userRepository).findById(OWNER_ID);
+        verify(userRepository).findByPhoneNumber("380672222222");
+        verify(userRepository).save(user);
+        verify(userMapper).toResponse(saved);
+    }
+
+    @Test
+    void updateProfile_shouldUpdateOnlyProvidedFields_whenSomeFieldsAreNull() {
+
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.USER);
+
+        User user = getUser();
+        User saved = getUser();
+        saved.setFirstName("John");
+
+        UserResponse response = new UserResponse(
+                1L,
+                "gmail",
+                "John",
+                "Nikson",
+                "+380671111111",
+                "BobNikson_21",
+                BigDecimal.ZERO,
+                Role.USER,
+                UserStatus.ACTIVE
+        );
+
+        when(userRepository.findById(OWNER_ID))
+                .thenReturn(Optional.of(user));
+
+        when(userRepository.save(user))
+                .thenReturn(saved);
+
+        when(userMapper.toResponse(saved))
+                .thenReturn(response);
+
+        UserProfilePatchRequest request = new UserProfilePatchRequest("John", null, null);
+
+        UserResponse result = userService.updateProfile(OWNER_ID, request, principal);
+
+        assertThat(result).isNotNull();
+        assertThat(result.firstName()).isEqualTo("John");
+
+        verify(userRepository).findById(OWNER_ID);
+        verify(userRepository, never()).findByPhoneNumber(any());
+        verify(userRepository).save(user);
+        verify(userMapper).toResponse(saved);
+    }
+
+    @Test
+    void updateProfile_shouldThrowAccessDeniedException_whenActingOnAnotherUser() {
+
+        CustomUserDetails principal = getPrincipal(OTHER_USER_ID, Role.USER);
+
+        UserProfilePatchRequest request = new UserProfilePatchRequest("John", "Doe", "380672222222");
+
+        assertThatThrownBy(() -> userService.updateProfile(OWNER_ID, request, principal))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("own profile");
+
+        verifyNoInteractions(userRepository, userMapper);
+    }
+
+    @Test
+    void updateProfile_shouldThrowResourceNotFoundException_whenUserDoesNotExist() {
+
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.USER);
+
+        when(userRepository.findById(OWNER_ID))
+                .thenReturn(Optional.empty());
+
+        UserProfilePatchRequest request = new UserProfilePatchRequest("John", "Doe", "380672222222");
+
+        assertThatThrownBy(() -> userService.updateProfile(OWNER_ID, request, principal))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("1");
+
+        verify(userRepository).findById(OWNER_ID);
+        verify(userRepository, never()).save(any(User.class));
+        verify(userMapper, never()).toResponse(any(User.class));
+    }
+
+    @Test
+    void updateProfile_shouldThrowResourceAlreadyExistsException_whenPhoneNumberTakenByAnotherUser() {
+
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.USER);
+
+        User user = getUser();
+        User otherUser = User.builder()
+                .id(OTHER_USER_ID)
+                .phoneNumber("380672222222")
+                .build();
+
+        when(userRepository.findById(OWNER_ID))
+                .thenReturn(Optional.of(user));
+
+        when(userRepository.findByPhoneNumber("380672222222"))
+                .thenReturn(Optional.of(otherUser));
+
+        UserProfilePatchRequest request = new UserProfilePatchRequest(null, null, "380672222222");
+
+        assertThatThrownBy(() -> userService.updateProfile(OWNER_ID, request, principal))
+                .isInstanceOf(ResourceAlreadyExistsException.class)
+                .hasMessageContaining("380672222222");
+
+        verify(userRepository).findById(OWNER_ID);
+        verify(userRepository).findByPhoneNumber("380672222222");
+        verify(userRepository, never()).save(any(User.class));
+        verify(userMapper, never()).toResponse(any(User.class));
+    }
+
+    @Test
+    void updateProfile_shouldUpdatePhoneNumber_whenPhoneNumberBelongsToSameUser() {
+
+        CustomUserDetails principal = getPrincipal(OWNER_ID, Role.USER);
+
+        User user = getUser();
+        User saved = getUser();
+        saved.setPhoneNumber("380671111111");
+
+        UserResponse response = getUserResponse();
+
+        when(userRepository.findById(OWNER_ID))
+                .thenReturn(Optional.of(user));
+
+        when(userRepository.findByPhoneNumber("380671111111"))
+                .thenReturn(Optional.of(user));
+
+        when(userRepository.save(user))
+                .thenReturn(saved);
+
+        when(userMapper.toResponse(saved))
+                .thenReturn(response);
+
+        UserProfilePatchRequest request = new UserProfilePatchRequest(null, null, "380671111111");
+
+        UserResponse result = userService.updateProfile(OWNER_ID, request, principal);
+
+        assertThat(result).isNotNull();
+
+        verify(userRepository).findById(OWNER_ID);
+        verify(userRepository).findByPhoneNumber("380671111111");
+        verify(userRepository).save(user);
+        verify(userMapper).toResponse(saved);
+    }
+
     private static User getUser() {
         return User.builder()
                 .id(OWNER_ID)
@@ -331,8 +523,8 @@ class UserServiceTest {
         return new CustomUserDetails(user);
     }
 
-    private static UserAdminResponse getUserAdminResponse() {
-        return new UserAdminResponse(
+    private static UserResponse getUserResponse() {
+        return new UserResponse(
                 1L,
                 "gmail",
                 "Bob",
