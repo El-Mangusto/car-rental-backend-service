@@ -116,6 +116,35 @@ class AuthServiceTest {
     }
 
     @Test
+    void registration_shouldThrowResourceAlreadyExistsException_whenEmailAlreadyExists() {
+        RegisterUserRequest request = getRegisterUserRequest();
+
+        when(userRepository.existsByLogin(request.login())).thenReturn(false);
+        when(userRepository.existsByEmail(request.email())).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.register(request))
+                .isInstanceOf(ResourceAlreadyExistsException.class)
+                .hasMessageContaining(request.email());
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void registration_shouldThrowResourceAlreadyExistsException_whenPhoneNumberAlreadyExists() {
+        RegisterUserRequest request = getRegisterUserRequest();
+
+        when(userRepository.existsByLogin(request.login())).thenReturn(false);
+        when(userRepository.existsByEmail(request.email())).thenReturn(false);
+        when(userRepository.existsByPhoneNumber(request.phoneNumber())).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.register(request))
+                .isInstanceOf(ResourceAlreadyExistsException.class)
+                .hasMessageContaining(request.phoneNumber());
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
     void login_shouldReturnToken_whenCredentialsAreValid() {
 
         LoginRequest request = new LoginRequest(LOGIN, PASSWORD);
