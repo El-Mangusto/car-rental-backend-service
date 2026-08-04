@@ -21,10 +21,9 @@ public class UserController {
         return userService.getById(principal.getId(), principal);
     }
 
-    @PatchMapping("/{id}")
-    public UserResponse updateProfile(@PathVariable Long id,
-                                      @RequestBody @Valid UserProfilePatchRequest request,
+    @PatchMapping("/me")
+    public UserResponse updateProfile(@RequestBody @Valid UserProfilePatchRequest request,
                                       CustomUserDetails principal) {
-        return userService.updateProfile(id, request, principal);
+        return userService.updateProfile(principal.getId(), request, principal);
     }
 }
